@@ -1,0 +1,43 @@
+# Agentic app (FastAPI + LangGraph)
+langchain
+langgraph
+langchain-community
+langchain-core
+langchain-huggingface
+langchain-groq
+groq
+pydantic
+python-dotenv
+
+# API server
+fastapi
+uvicorn
+python-multipart
+requests
+
+# Document parsing (app + RAG pipeline)
+pypdf
+pymupdf
+python-docx
+python-pptx
+openpyxl
+unstructured
+
+# RAG / embeddings
+faiss-cpu
+sentence-transformers>=3.0.0
+huggingface_hub>=0.23.0
+rank-bm25
+torch
+
+# PDF generation & templating
+jinja2
+reportlab
+
+# Logging & testing
+loguru
+pytest
+json-repair
+
+# Legacy Streamlit UI
+streamlit
