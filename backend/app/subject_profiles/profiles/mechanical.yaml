@@ -1,0 +1,78 @@
+# ============================================================
+# Mechanical Engineering Subject Profile
+# ============================================================
+
+subject_name: Mechanical Engineering
+description: >
+  Mechanical engineering disciplines covering thermodynamics, fluid mechanics,
+  heat transfer, machine design, manufacturing processes, strength of materials,
+  engineering mechanics, and automotive systems.
+
+question_styles:
+  - numerical_problem
+  - derivation
+  - diagram_based
+  - conceptual_explanation
+  - design_problem
+  - compare_and_contrast
+  - process_description
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 25
+  medium: 45
+  hard: 30
+
+question_guidelines:
+  - "2-mark questions: state laws, define terms, or perform simple unit conversions."
+  - "5-mark questions: solve a moderate numerical problem OR explain a thermodynamic process."
+  - "10-mark questions: multi-step problem or complete process analysis with results."
+  - "15-mark questions: design problem with calculations, selection of parameters, and justification."
+  - "All numerical problems must include clearly stated given data with SI units."
+  - "Thermodynamics problems must specify the system, process type, and boundary conditions."
+  - "Fluid mechanics problems must specify fluid properties (density, viscosity) if needed."
+  - "Manufacturing questions must address tolerances or surface finish where applicable."
+  - "Strength of materials problems must specify material properties (E, yield strength) if needed."
+
+answer_guidelines:
+  - "Show the Free Body Diagram description for any statics or dynamics problem."
+  - "Apply the correct governing equation, then substitute values step by step."
+  - "For thermodynamics: apply the relevant law (First, Second), compute heat, work, and entropy."
+  - "For fluid mechanics: identify flow regime (laminar/turbulent), apply Bernoulli or Navier-Stokes."
+  - "For heat transfer: identify mechanism (conduction/convection/radiation), apply formula."
+  - "Final answers must include correct SI units and be verified against physical reasonableness."
+
+preferred_action_verbs:
+  - Calculate
+  - Determine
+  - Derive
+  - Design
+  - Analyze
+  - Explain
+  - Describe
+  - Compare
+  - Sketch (describe)
+  - Evaluate
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Numerical problems without material/fluid properties when needed"
+  - "Design questions without constraints or specifications"
+
+numerical_required: true
+diagram_required: true
+
+subject_specific_instructions:
+  - "For thermodynamics: specify open or closed system, and the process path."
+  - "For kinematics/dynamics: define the reference point and positive direction."
+  - "For manufacturing: specify the operation (turning, milling, welding, casting) explicitly."
+  - "For machine design: specify the failure theory (von Mises, Tresca) for stress analysis."
+  - "For heat exchangers: specify flow arrangement (parallel, counter, cross flow)."
+
+prompt_template_override: null

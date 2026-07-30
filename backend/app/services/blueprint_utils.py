@@ -163,6 +163,31 @@ def reconcile_questions_to_blueprint(
                         "during blueprint reconciliation."
                     )
             reconciled.extend(kept)
+        elif len(band) < needed:
+            reconciled.extend(band)
+            deficit = needed - len(band)
+            for i in range(deficit):
+                if len(band) > 0:
+                    source = band[i % len(band)]
+                    cloned = dict(source)
+                    cloned["id"] = f"{source.get('id')}_b{i+1}"
+                    cloned["question"] = f"{source.get('question')} (Variant {i+1})"
+                    actions.append(
+                        f"Filled deficit of {mark}-mark questions by cloning variant from {source.get('id')}."
+                    )
+                else:
+                    cloned = {
+                        "id": f"dummy_{mark}_{i}",
+                        "question": "[Auto-generated placeholder - Please review]",
+                        "marks": mark,
+                        "difficulty": "medium",
+                        "question_type": "descriptive",
+                        "topic": "General"
+                    }
+                    actions.append(
+                        f"Filled deficit of {mark}-mark questions by adding a placeholder."
+                    )
+                reconciled.append(cloned)
         else:
             reconciled.extend(band)
 

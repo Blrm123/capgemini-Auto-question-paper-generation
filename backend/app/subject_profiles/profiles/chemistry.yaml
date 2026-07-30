@@ -1,0 +1,75 @@
+# ============================================================
+# Chemistry Subject Profile
+# ============================================================
+
+subject_name: Chemistry
+description: >
+  Chemical sciences covering organic, inorganic, physical, and analytical
+  chemistry for engineering and science undergraduates.
+
+question_styles:
+  - reaction_mechanism
+  - numerical_problem
+  - structure_drawing_description
+  - conceptual_explanation
+  - compare_and_contrast
+  - experimental_procedure
+  - short_definition
+
+blooms_preferences:
+  - Understand
+  - Apply
+  - Analyze
+
+difficulty_distribution:
+  easy: 30
+  medium: 45
+  hard: 25
+
+question_guidelines:
+  - "2-mark questions: define terms, state properties, write balanced equations."
+  - "5-mark questions: explain mechanisms OR solve stoichiometry/thermochemistry problems."
+  - "10-mark questions: detailed reaction mechanism, multi-step synthesis, or physical chemistry derivation."
+  - "15-mark questions: comprehensive reaction pathway, comparative analysis of compounds, or industrial process."
+  - "Numerical problems (molarity, pH, rate constants, Hess's law) must show all working steps."
+  - "All chemical equations must be balanced."
+  - "IUPAC nomenclature must be used for all organic compounds."
+  - "Questions must specify state symbols (s), (l), (g), (aq) in equations where relevant."
+
+answer_guidelines:
+  - "Write complete, balanced chemical equations for all reaction answers."
+  - "For mechanism questions: show arrow-pushing, intermediates, and rate-determining steps."
+  - "For numerical problems: given data, formula used, substitution, and answer with units."
+  - "For comparison questions: use a table or point-by-point structure."
+  - "IUPAC names must be correct — penalize incorrect naming in key points."
+
+preferred_action_verbs:
+  - Write
+  - Draw
+  - Balance
+  - Explain the mechanism
+  - Calculate
+  - Distinguish between
+  - Describe
+  - Derive
+  - Identify
+  - Outline the synthesis of
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Unbalanced equations in questions"
+  - "Common names instead of IUPAC names for unknown compounds"
+
+numerical_required: true
+diagram_required: false
+
+subject_specific_instructions:
+  - "For organic chemistry: always specify reagents and conditions for reactions."
+  - "For thermochemistry: specify standard state conditions (298 K, 1 atm) in problems."
+  - "For electrochemistry: specify electrode materials and electrolyte in cell problems."
+  - "For quantum chemistry: use correct quantum number notation (n, l, ml, ms)."
+  - "Do not ask students to recall spectroscopic data (IR peaks, NMR shifts) from memory unless the data is provided."
+
+prompt_template_override: null

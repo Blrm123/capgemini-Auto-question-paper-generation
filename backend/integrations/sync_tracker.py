@@ -1,5 +1,6 @@
 # backend/integrations/sync_tracker.py
-import json, os
+import json
+import os
 
 def load_sync_state(state_path: str) -> dict:
     if os.path.exists(state_path):

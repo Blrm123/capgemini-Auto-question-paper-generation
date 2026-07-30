@@ -1,0 +1,87 @@
+# ============================================================
+# Computer Science Subject Profile
+# ============================================================
+
+subject_name: Computer Science
+description: >
+  Computing disciplines covering data structures, algorithms, operating systems,
+  database systems, computer networks, software engineering, programming paradigms,
+  web technologies, and computer architecture.
+
+question_styles:
+  - algorithm_design_and_trace
+  - conceptual_explanation
+  - code_logic_description
+  - compare_and_contrast
+  - numerical_problem
+  - application_scenario
+  - diagram_based
+  - short_definition
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Create
+  - Evaluate
+
+difficulty_distribution:
+  easy: 25
+  medium: 45
+  hard: 30
+
+question_guidelines:
+  - "2-mark questions: define terms, state differences, or describe the purpose of a concept."
+  - "5-mark questions: trace an algorithm on a given input, OR compare two techniques with criteria."
+  - "10-mark questions: design/explain an algorithm with steps, time complexity, and example trace."
+  - "15-mark questions: design a complete system component, analyze trade-offs, or solve a multi-part problem."
+  - "Algorithm questions MUST provide concrete input data for tracing — never ask to trace on 'some input'."
+  - "Code logic descriptions must use plain English pseudocode — not actual code syntax."
+  - "Complexity analysis questions must specify whether it is time or space complexity."
+  - "Database questions must specify the schema (table names and columns) if SQL is involved."
+  - "Network questions must reference specific protocol layers (OSI or TCP/IP)."
+
+answer_guidelines:
+  - "For algorithm traces: show every step of execution with the data structure state at each step."
+  - "For algorithm design: write pseudocode, explain each step, analyze time and space complexity."
+  - "For comparison questions: use a structured table with at least 3 criteria."
+  - "For database answers: write correct SQL with proper syntax and explain the result."
+  - "For network answers: specify the protocol, layer, and data unit (packet, frame, segment)."
+  - "For OS answers: distinguish between user mode and kernel mode where relevant."
+  - "Time complexity must use Big-O notation: O(n), O(n log n), O(n²), etc."
+
+preferred_action_verbs:
+  - Trace
+  - Design
+  - Explain
+  - Compare
+  - Implement (describe)
+  - Analyze
+  - Construct
+  - Differentiate
+  - Apply
+  - Evaluate
+  - Calculate (complexity)
+  - Define
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Write actual code (ask for pseudocode or algorithm description instead)"
+  - "Algorithm trace without specifying initial input data"
+  - "Questions that require memorizing exact numerical constants (e.g., specific IP addresses)"
+
+numerical_required: false
+diagram_required: false
+
+subject_specific_instructions:
+  - "All algorithm traces must show intermediate state of the data structure at each step."
+  - "For graph algorithms: specify whether it is directed/undirected and weighted/unweighted."
+  - "For sorting algorithms: always specify the initial array to be sorted."
+  - "For tree problems: specify root node and tree structure."
+  - "For network questions: always specify the network model (OSI 7-layer or TCP/IP 5-layer)."
+  - "For database questions: always provide the table schema before the question."
+  - "Big-O notation must be used for all complexity answers."
+  - "Do not ask students to write implementation-level code; ask for algorithmic descriptions."
+
+prompt_template_override: null

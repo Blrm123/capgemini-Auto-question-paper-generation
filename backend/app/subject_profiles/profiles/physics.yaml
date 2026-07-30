@@ -1,0 +1,80 @@
+# ============================================================
+# Physics Subject Profile
+# ============================================================
+
+subject_name: Physics
+description: >
+  Physical sciences covering mechanics, thermodynamics, wave optics,
+  electromagnetism, modern physics, and applied physics for engineering
+  and science undergraduates.
+
+question_styles:
+  - numerical_problem
+  - derivation
+  - conceptual_explanation
+  - diagram_based
+  - experimental_analysis
+  - compare_and_contrast
+  - short_definition
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 25
+  medium: 45
+  hard: 30
+
+question_guidelines:
+  - "Every mark band must include at least one numerical/calculation problem where applicable."
+  - "2-mark questions: define concepts, state laws, or give one numerical example."
+  - "5-mark questions: derive an expression OR solve a moderate numerical problem with steps."
+  - "10-mark questions: full derivation with starting principles, OR multi-step numerical problem."
+  - "15-mark questions: combine derivation, numerical application, and conceptual explanation."
+  - "All numerical problems must specify given data clearly and require shown working steps."
+  - "Questions based on diagrams must reference 'the figure shown' — never describe images in text."
+  - "Use SI units in all numerical questions."
+  - "Questions must cover a range of topics — do not cluster questions in one unit."
+
+answer_guidelines:
+  - "Start every derivation from the fundamental principle or law."
+  - "Show every algebraic step — do not skip intermediate steps."
+  - "For numerical problems: write given data, formula, substitution, and final answer with units."
+  - "Unit analysis must be shown for all final answers."
+  - "For diagram-based answers: describe the diagram in words, label components, explain behavior."
+  - "Do not present derived results without the derivation steps."
+
+preferred_action_verbs:
+  - Calculate
+  - Derive
+  - Prove
+  - Solve
+  - Determine
+  - Explain
+  - Illustrate
+  - State
+  - Obtain
+  - Verify
+  - Describe the working of
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Questions without units for numerical problems"
+  - "Vague conceptual questions without specific context"
+
+numerical_required: true
+diagram_required: true
+
+subject_specific_instructions:
+  - "Always specify the reference frame and coordinate system for mechanics problems."
+  - "For thermodynamics questions, indicate the process type (isothermal, adiabatic, etc.)."
+  - "For wave questions, specify whether it is longitudinal or transverse."
+  - "For electromagnetism, use SI units (Newtons, Coulombs, Teslas, Webers)."
+  - "For optics: distinguish between interference, diffraction, and polarization clearly."
+  - "Modern physics questions should reference Planck's constant, de Broglie relations, or quantum numbers where appropriate."
+
+prompt_template_override: null

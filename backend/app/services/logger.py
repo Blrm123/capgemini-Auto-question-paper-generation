@@ -133,19 +133,19 @@ def log_execution_time(
         logger:     The module logger instance.
         agent_name: Human-readable name of the agent or step being timed.
     """
-    logger.info(f"▶ [{agent_name}] Execution started")
+    logger.info(f"> [{agent_name}] Execution started")
     start_time = time.perf_counter()
     try:
         yield
     except Exception as exc:
         elapsed = time.perf_counter() - start_time
         logger.error(
-            f"✖ [{agent_name}] Failed after {elapsed:.2f}s — {type(exc).__name__}: {exc}"
+            f"[FAIL] [{agent_name}] Failed after {elapsed:.2f}s — {type(exc).__name__}: {exc}"
         )
         raise
     else:
         elapsed = time.perf_counter() - start_time
-        logger.info(f"✔ [{agent_name}] Completed in {elapsed:.2f}s")
+        logger.info(f"[OK] [{agent_name}] Completed in {elapsed:.2f}s")
 
 
 # ---------------------------------------------------------------------------

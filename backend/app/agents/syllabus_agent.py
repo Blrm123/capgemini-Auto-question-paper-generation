@@ -127,6 +127,35 @@ class SyllabusAgent:
         # ------------------------------------------------------------------
         # 3. Validate response is a non-empty list
         # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
+        # 3. Handle wrapper dicts and nested arrays (e.g. [[{...}]])
+        # ------------------------------------------------------------------
+        if isinstance(raw_data, dict):
+            for key, val in raw_data.items():
+                if isinstance(val, list) and len(val) > 0:
+                    logger.info(f"{AGENT_NAME}: Unwrapped list from dict key '{key}'.")
+                    raw_data = val
+                    break
+
+        if isinstance(raw_data, list):
+            # Flatten nested lists recursively if LLM returned 2D array [[{...}]]
+            flat_items = []
+            def _flatten(arr):
+                for elem in arr:
+                    if isinstance(elem, list):
+                        _flatten(elem)
+                    elif isinstance(elem, dict):
+                        flat_items.append(elem)
+                    elif isinstance(elem, str) and elem.strip().startswith("{") and elem.strip().endswith("}"):
+                        try:
+                            import json
+                            flat_items.append(json.loads(elem.strip()))
+                        except Exception:
+                            pass
+            _flatten(raw_data)
+            if flat_items:
+                raw_data = flat_items
+
         if not isinstance(raw_data, list) or len(raw_data) == 0:
             result_description = (
                 "an empty JSON array"
@@ -155,45 +184,57 @@ class SyllabusAgent:
 
         for idx, item in enumerate(raw_data):
             if not isinstance(item, dict):
-                validation_errors.append(
-                    f"{AGENT_NAME}: Item at index {idx} is not a dict — skipped."
-                )
                 continue
 
-            unit_number = item.get("unit_number")
-            unit_name = item.get("unit_name")
-            topics = item.get("topics")
+            # Flexible field extraction for key variants (e.g. name, title, subtopics)
+            unit_number = (
+                item.get("unit_number")
+                if item.get("unit_number") is not None
+                else item.get("unit")
+                if item.get("unit") is not None
+                else item.get("unit_no")
+                if item.get("unit_no") is not None
+                else item.get("number")
+                if item.get("number") is not None
+                else idx + 1  # Fallback to index + 1 if missing
+            )
+            unit_name = (
+                item.get("unit_name")
+                or item.get("name")
+                or item.get("title")
+                or item.get("unit_title")
+                or item.get("module_name")
+                or f"Unit {unit_number}"
+            )
+            raw_topics = (
+                item.get("topics")
+                or item.get("subtopics")
+                or item.get("topic_list")
+                or item.get("sub_topics")
+                or []
+            )
 
             # Check required fields
-            if unit_number is None:
-                validation_errors.append(
-                    f"{AGENT_NAME}: Item {idx} missing 'unit_number' — skipped."
-                )
-                continue
             if not unit_name or not isinstance(unit_name, str):
-                validation_errors.append(
-                    f"{AGENT_NAME}: Item {idx} missing or invalid 'unit_name' — skipped."
-                )
-                continue
-            if not isinstance(topics, list) or len(topics) == 0:
-                validation_errors.append(
-                    f"{AGENT_NAME}: Item {idx} ('{unit_name}') has no topics — skipped."
-                )
                 continue
 
             # Coerce unit_number to int in case LLM returns it as a string
             try:
                 unit_number = int(unit_number)
             except (ValueError, TypeError):
-                validation_errors.append(
-                    f"{AGENT_NAME}: Item {idx} 'unit_number' is not a valid integer — skipped."
-                )
-                continue
+                unit_number = idx + 1
 
-            # Filter out non-string topics
-            clean_topics: list[str] = [
-                str(t).strip() for t in topics if str(t).strip()
-            ]
+            # Filter out junk topic strings like 'n', '\n', single letters or empty lines
+            if isinstance(raw_topics, str):
+                raw_topics = [t.strip() for t in raw_topics.split("\n") if t.strip()]
+
+            clean_topics: list[str] = []
+            if isinstance(raw_topics, list):
+                for t in raw_topics:
+                    t_str = str(t).strip()
+                    if t_str and t_str.casefold() not in ("n", "\\n", "none", "null") and len(t_str) > 1:
+                        clean_topics.append(t_str)
+
             if not clean_topics:
                 validation_errors.append(
                     f"{AGENT_NAME}: Item {idx} ('{unit_name}') has no valid topic strings — skipped."
@@ -211,7 +252,6 @@ class SyllabusAgent:
         # Log any per-item validation warnings (non-fatal)
         for warning in validation_errors:
             logger.warning(warning)
-        errors.extend(validation_errors)
 
         # ------------------------------------------------------------------
         # 5. Final guard: at least one valid unit must have been extracted

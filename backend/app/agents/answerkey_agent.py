@@ -116,39 +116,27 @@ class AnswerKeyAgent:
         )
 
         try:
-            logger.info(f"{AGENT_NAME}: Attempting to generate key using Llama 3.3 70B (4,096 output tokens)...")
+            default_model = settings.llm.MODEL_NAME
+            is_large = "3.3" in default_model.lower() or "70b" in default_model.lower()
+            max_tokens = 8192 if is_large else 3000
+            
+            logger.info(f"{AGENT_NAME}: Generating key using {default_model} ({max_tokens} output tokens)...")
             raw_data = self.llm.call_llm_for_json(
                 system_prompt=ANSWERKEY_SYSTEM_PROMPT,
                 user_prompt=user_prompt,
                 agent_name=AGENT_NAME,
-                max_tokens=4096,
-                model_name="llama-3.3-70b-versatile",
+                max_tokens=max_tokens,
             )
-        except Exception as primary_exc:
-            logger.warning(
-                f"{AGENT_NAME}: Primary LLM call failed ({primary_exc}). "
-                f"Falling back to default model config..."
-            )
-            try:
-                default_model = settings.llm.MODEL_NAME
-                is_large = "3.3" in default_model.lower() or "70b" in default_model.lower()
-                fallback_max_tokens = 8192 if is_large else 3000
-                raw_data = self.llm.call_llm_for_json(
-                    system_prompt=ANSWERKEY_SYSTEM_PROMPT,
-                    user_prompt=user_prompt,
-                    agent_name=AGENT_NAME,
-                    max_tokens=fallback_max_tokens,
-                )
-            except (RuntimeError, ValueError) as exc:
-                error_msg = f"{AGENT_NAME}: Fallback LLM call failed — {exc}"
-                logger.error(error_msg)
-                errors.append(error_msg)
-                return {
-                    "answer_key": [],
-                    "current_agent": AGENT_NAME,
-                    "status": "failed",
-                    "errors": errors,
-                }
+        except (RuntimeError, ValueError) as exc:
+            error_msg = f"{AGENT_NAME}: LLM call failed — {exc}"
+            logger.error(error_msg)
+            errors.append(error_msg)
+            return {
+                "answer_key": [],
+                "current_agent": AGENT_NAME,
+                "status": "failed",
+                "errors": errors,
+            }
 
         # ------------------------------------------------------------------
         # 4. Validate response is a non-empty list

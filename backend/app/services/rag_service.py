@@ -10,17 +10,22 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from app.config import settings
+# ---------------------------------------------------------------------------
+# RAG sub-package path bootstrap
+# Must happen before importing from src.* (which lives in the rag/ subdirectory)
+# ---------------------------------------------------------------------------
+from app.config import settings  # noqa: E402 - needed before path setup
+
+_RAG_DIR = str(settings.paths.BASE_DIR / "rag")
+if _RAG_DIR not in sys.path:
+    sys.path.insert(0, _RAG_DIR)
+
+from src.generation.context_builder import format_chunks_for_prompt  # type: ignore  # noqa: E402
+from src.pipeline.rag_pipeline import RAGPipeline  # type: ignore  # noqa: E402
+
 from app.services.logger import setup_logger
 
 logger = setup_logger(__name__)
-
-RAG_DIR = settings.paths.BASE_DIR / "rag"
-if str(RAG_DIR) not in sys.path:
-    sys.path.insert(0, str(RAG_DIR))
-
-from src.generation.context_builder import format_chunks_for_prompt  # noqa: E402
-from src.pipeline.rag_pipeline import RAGPipeline  # noqa: E402
 
 SYLLABUS_RETRIEVAL_QUERY = (
     "syllabus units modules topics course outline curriculum learning objectives"
@@ -28,7 +33,7 @@ SYLLABUS_RETRIEVAL_QUERY = (
 CHUNK_PREVIEW_CHARS = 400
 MAX_CHUNKS_IN_DEBUG = 15
 TOPIC_RETRIEVAL_TOP_K = int(os.getenv("TOPIC_RETRIEVAL_TOP_K", "2"))
-MAX_TOPIC_CONTEXT_CHUNKS = int(os.getenv("MAX_TOPIC_CONTEXT_CHUNKS", "16"))
+MAX_TOPIC_CONTEXT_CHUNKS = int(os.getenv("MAX_TOPIC_CONTEXT_CHUNKS", "8"))  # reduced from 16 → 8 for cleaner prompts
 
 
 def chunk_preview(chunk: dict[str, Any], max_chars: int = CHUNK_PREVIEW_CHARS) -> dict[str, Any]:

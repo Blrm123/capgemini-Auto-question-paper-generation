@@ -1,0 +1,76 @@
+# ============================================================
+# Electronics Subject Profile
+# ============================================================
+
+subject_name: Electronics
+description: >
+  Electronics and communication engineering covering analog circuits, digital
+  electronics, signal processing, VLSI design, embedded systems, microprocessors,
+  control systems, and communication theory.
+
+question_styles:
+  - circuit_analysis
+  - numerical_problem
+  - diagram_based
+  - conceptual_explanation
+  - design_problem
+  - compare_and_contrast
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 25
+  medium: 45
+  hard: 30
+
+question_guidelines:
+  - "2-mark questions: define components, state properties, OR write truth tables for simple gates."
+  - "5-mark questions: analyze a given circuit, OR design a simple combinational circuit."
+  - "10-mark questions: full circuit analysis with multiple stages, OR design with verification."
+  - "15-mark questions: complex design problem with specifications, analysis, and trade-off discussion."
+  - "Circuit analysis questions must provide component values (R in Ohms, C in Farads, etc.)."
+  - "Digital design questions must specify the number of inputs/outputs."
+  - "Signal processing questions must specify the sampling rate or bandwidth where applicable."
+  - "All numerical calculations must show intermediate steps and use correct units."
+
+answer_guidelines:
+  - "For circuit analysis: apply KVL/KCL systematically, show all equations, and compute final values."
+  - "For digital circuits: include truth table, K-map (if applicable), and Boolean expression."
+  - "For amplifier problems: identify the configuration, compute gain, input/output impedance."
+  - "For filter design: specify type (low-pass, high-pass, etc.), cutoff frequency, and response."
+  - "For microprocessor programs: write in assembly pseudocode with register operations explained."
+  - "All units must be correct: Volts, Amps, Ohms, Farads, Henrys, Hz, rad/s."
+
+preferred_action_verbs:
+  - Analyze
+  - Design
+  - Calculate
+  - Draw
+  - Derive
+  - Explain
+  - Determine
+  - Implement (describe)
+  - Compare
+  - Verify
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Circuit problems without component values"
+  - "Design problems without specifications or constraints"
+
+numerical_required: true
+diagram_required: true
+
+subject_specific_instructions:
+  - "For op-amp questions: specify the circuit topology (inverting, non-inverting, summing)."
+  - "For transistor questions: specify BJT or MOSFET and the operating region (active, saturation, cutoff)."
+  - "For digital electronics: use positive logic convention unless stated otherwise."
+  - "For control systems: specify open-loop or closed-loop and the transfer function form."
+  - "For communication: specify modulation type (AM, FM, PM, QAM, etc.) and channel characteristics."
+
+prompt_template_override: null

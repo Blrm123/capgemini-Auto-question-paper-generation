@@ -307,6 +307,7 @@ class Orchestrator:
             pdf_errors.append(error_msg)
 
         # ------------------------------------------------------------------
+        # ------------------------------------------------------------------
         # 8. Determine overall success and return result
         # ------------------------------------------------------------------
         all_errors = accumulated_errors + pdf_errors
@@ -316,8 +317,8 @@ class Orchestrator:
 
         if success:
             logger.info(
-                f"Orchestrator: Pipeline completed successfully in {elapsed:.2f}s. "
-                f"Errors/warnings: {len(all_errors)}"
+                f"Orchestrator: Pipeline completed successfully in {elapsed:.2f}s "
+                f"(0 fatal errors, {len(all_errors)} quality notes/warnings)."
             )
         else:
             logger.error(

@@ -1,0 +1,80 @@
+# ============================================================
+# Biology Subject Profile
+# ============================================================
+
+subject_name: Biology
+description: >
+  Life sciences covering cell biology, genetics, molecular biology,
+  physiology, ecology, evolution, and biotechnology for science and
+  engineering undergraduates.
+
+question_styles:
+  - conceptual_explanation
+  - diagram_based
+  - compare_and_contrast
+  - process_description
+  - experimental_analysis
+  - case_study_analysis
+  - short_definition
+
+blooms_preferences:
+  - Understand
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 30
+  medium: 45
+  hard: 25
+
+question_guidelines:
+  - "2-mark questions: define biological terms OR state functions of biological structures."
+  - "5-mark questions: explain a biological process OR compare two related structures/functions."
+  - "10-mark questions: describe a complete process (e.g., DNA replication, photosynthesis) with mechanism steps."
+  - "15-mark questions: critically analyze a biological concept, compare systems, or describe experimental methodology."
+  - "Diagram-based questions must reference 'the diagram shown' and ask students to label, explain, or analyze it."
+  - "Questions about processes must include all major steps — not a superficial overview."
+  - "Use correct biological nomenclature (genus species in italics — written as: Genus species)."
+  - "Questions must be grounded in the source material — do not invent organisms or diseases."
+
+answer_guidelines:
+  - "Process descriptions must include all sequential steps in order."
+  - "For comparison questions: use structured format with specific criteria."
+  - "For diagram-based answers: describe each labeled component and its function."
+  - "Use correct biological terminology consistently."
+  - "For experimental analysis: describe controls, variables, expected results, and conclusions."
+  - "For genetics problems: show Punnett squares or probability calculations where applicable."
+
+preferred_action_verbs:
+  - Explain
+  - Describe
+  - Define
+  - Compare
+  - Differentiate
+  - Discuss
+  - Draw and label
+  - Outline
+  - Analyze
+  - Justify
+  - Evaluate
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Questions about specific organisms not mentioned in source material"
+  - "Clinical questions requiring medical diagnoses"
+  - "Questions that invent biological facts not in the source"
+
+numerical_required: false
+diagram_required: true
+
+subject_specific_instructions:
+  - "For genetics: clearly specify the type of inheritance (Mendelian, sex-linked, codominant)."
+  - "For ecology: distinguish between community, population, and ecosystem levels."
+  - "For biochemistry: include enzyme kinetics (Km, Vmax) only if covered in source material."
+  - "For physiology: specify the organ system and the regulatory mechanism."
+  - "For molecular biology: use standard abbreviations (DNA, RNA, mRNA, tRNA) and explain them on first use."
+
+prompt_template_override: null

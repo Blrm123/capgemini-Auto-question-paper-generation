@@ -1,0 +1,83 @@
+# ============================================================
+# Mathematics Subject Profile
+# ============================================================
+
+subject_name: Mathematics
+description: >
+  Engineering and applied mathematics covering calculus, linear algebra,
+  differential equations, probability, statistics, discrete mathematics,
+  and numerical methods.
+
+question_styles:
+  - numerical_problem
+  - proof_and_derivation
+  - application_problem
+  - theorem_statement
+  - algorithm_tracing
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 20
+  medium: 50
+  hard: 30
+
+question_guidelines:
+  - "ALL questions must be solvable — every numerical problem must have a unique correct answer."
+  - "2-mark questions: state a theorem/definition OR compute a simple expression with one or two steps."
+  - "5-mark questions: solve a moderate problem with multiple steps, OR prove a short theorem."
+  - "10-mark questions: multi-step problem requiring setup, solving, and verification, OR a full proof."
+  - "15-mark questions: complex multi-part problem OR a complete proof with applications."
+  - "Every problem must include the complete initial conditions or data needed to solve it."
+  - "Do NOT generate open-ended problems without a definite numerical or symbolic answer."
+  - "Matrix problems must specify the exact matrix dimensions and entries."
+  - "Integration and differentiation problems must specify the function and limits clearly."
+  - "Word problems must be unambiguous — no missing information."
+
+answer_guidelines:
+  - "Show every intermediate algebraic/arithmetic step — no skipping."
+  - "For matrix operations: show row-by-column multiplication explicitly for every entry."
+  - "For integration: show the anti-derivative step and evaluation at limits."
+  - "For differential equations: show general solution then particular solution with IC applied."
+  - "For proofs: state what is to be proven, provide complete logical steps, conclude with QED."
+  - "For statistics/probability: define events, write formula, substitute, compute."
+  - "Verify the answer where possible (e.g., back-substitute into ODE, check matrix inverse)."
+
+preferred_action_verbs:
+  - Solve
+  - Prove
+  - Find
+  - Calculate
+  - Evaluate
+  - Determine
+  - Verify
+  - Derive
+  - Compute
+  - Reduce
+  - Apply
+  - Expand
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Problems without sufficient given data"
+  - "Questions asking to 'simplify' without specifying what form"
+  - "Ambiguous word problems"
+
+numerical_required: true
+diagram_required: false
+
+subject_specific_instructions:
+  - "Write matrices using plain text notation: [[1,2],[3,4]] — never use LaTeX."
+  - "Write fractions as a/b or (numerator)/(denominator) in plain text."
+  - "Write powers as x^n in plain text."
+  - "Summation: use sigma(i=1 to n) notation in plain text."
+  - "Integration: use integral(a to b) f(x)dx in plain text."
+  - "For calculus questions: always specify the variable of differentiation/integration."
+  - "For statistics: specify whether it is population or sample statistics."
+
+prompt_template_override: null

@@ -3,32 +3,25 @@ workflows/langgraph_workflow.py
 
 LangGraph Workflow for the Agentic Question Paper Generator.
 
-This module constructs and compiles the StateGraph that orchestrates
-all agent nodes in sequence with conditional error routing.
+Workflow Order (FIXED: SyllabusAgent runs first so ImageDescriptorAgent
+has real topic names available for Gemini vision context):
 
-Workflow:
     START
-      → syllabus_agent
-      → topic_retrieval_agent (no LLM; refreshes RAG context per topic)
-      → question_generator_agent
-      → bloom_agent
-      → validation_agent
-      → answerkey_agent
-      → END
+      -> syllabus_agent           (extract structured topics)
+      -> image_descriptor_agent   (Gemini vision: describe images using real topics)
+      -> topic_retrieval_agent    (refresh RAG context per topic)
+      -> question_generator_agent (generate questions + image-based questions)
+      -> bloom_agent              (Bloom taxonomy tagging)
+      -> validation_agent         (structural quality validation)
+      -> answerkey_agent          (generate answer key)
+      -> END
 
 Error Routing:
     After each agent, if state["status"] == "failed",
     the workflow routes directly to END to stop further execution.
-
-Usage:
-    from app.workflows.langgraph_workflow import create_workflow, build_initial_state
-
-    compiled = create_workflow()
-    initial  = build_initial_state(rag_chunks=..., syllabus_context=..., ...)
-    result   = compiled.invoke(initial)
 """
 
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from langgraph.graph import END, StateGraph
 
@@ -45,11 +38,11 @@ from app.services.logger import setup_logger
 logger = setup_logger(__name__)
 
 # ---------------------------------------------------------------------------
-# Node name constants — single source of truth for graph wiring
+# Node name constants - single source of truth for graph wiring
 # ---------------------------------------------------------------------------
 NODE_SYLLABUS = "syllabus_agent"
-NODE_TOPIC_RETRIEVAL = "topic_retrieval_agent"
 NODE_IMAGE_DESCRIPTOR = "image_descriptor_agent"
+NODE_TOPIC_RETRIEVAL = "topic_retrieval_agent"
 NODE_QUESTION = "question_generator_agent"
 NODE_BLOOM = "bloom_agent"
 NODE_VALIDATION = "validation_agent"
@@ -85,8 +78,11 @@ def create_workflow() -> Any:
     """
     Build and compile the LangGraph StateGraph.
 
-    Nodes are wired in sequence with conditional edges so that a
-    failure in any node halts the workflow immediately.
+    Order: SyllabusAgent -> ImageDescriptorAgent -> TopicRetrievalAgent
+           -> QuestionGeneratorAgent -> BloomAgent -> ValidationAgent -> AnswerKeyAgent
+
+    SyllabusAgent runs FIRST so ImageDescriptorAgent receives real syllabus
+    topics for Gemini vision context.
 
     Returns:
         A compiled LangGraph CompiledStateGraph ready to invoke.
@@ -96,27 +92,25 @@ def create_workflow() -> Any:
     graph = StateGraph(AgentState)
 
     # ---- Register nodes ----
-    graph.add_node(NODE_SYLLABUS,   syllabus_agent_node)
-    graph.add_node(NODE_TOPIC_RETRIEVAL, topic_retrieval_agent_node)
-    graph.add_node(NODE_IMAGE_DESCRIPTOR, image_descriptor_agent_node)
-    graph.add_node(NODE_QUESTION,   question_generator_agent_node)
-    graph.add_node(NODE_BLOOM,      bloom_agent_node)
-    graph.add_node(NODE_VALIDATION, validation_agent_node)
-    graph.add_node(NODE_ANSWERKEY,  answerkey_agent_node)
+    graph.add_node(NODE_SYLLABUS,          syllabus_agent_node)
+    graph.add_node(NODE_IMAGE_DESCRIPTOR,  image_descriptor_agent_node)
+    graph.add_node(NODE_TOPIC_RETRIEVAL,   topic_retrieval_agent_node)
+    graph.add_node(NODE_QUESTION,          question_generator_agent_node)
+    graph.add_node(NODE_BLOOM,             bloom_agent_node)
+    graph.add_node(NODE_VALIDATION,        validation_agent_node)
+    graph.add_node(NODE_ANSWERKEY,         answerkey_agent_node)
 
-    # ---- Entry point ----
-    # Describe diagrams first so syllabus extraction also works for PDFs with
-    # little or no selectable text.
-    graph.set_entry_point(NODE_IMAGE_DESCRIPTOR)
+    # ---- Entry point: SyllabusAgent runs FIRST ----
+    graph.set_entry_point(NODE_SYLLABUS)
 
     # ---- Conditional edges: continue or stop after each agent ----
     graph.add_conditional_edges(
-        NODE_IMAGE_DESCRIPTOR,
+        NODE_SYLLABUS,
         _route_after_agent,
-        {"ok": NODE_SYLLABUS, "failed": END},
+        {"ok": NODE_IMAGE_DESCRIPTOR, "failed": END},
     )
     graph.add_conditional_edges(
-        NODE_SYLLABUS,
+        NODE_IMAGE_DESCRIPTOR,
         _route_after_agent,
         {"ok": NODE_TOPIC_RETRIEVAL, "failed": END},
     )
@@ -164,9 +158,6 @@ def build_initial_state(
     """
     Construct a fully-initialised AgentState dict to pass to the workflow.
 
-    All list and optional fields are set to their empty/None defaults so
-    LangGraph's merge logic works correctly from the first node.
-
     Args:
         rag_chunks:         All document chunks from RAG ingestion.
         syllabus_context:   Formatted retrieved chunks for syllabus extraction.
@@ -178,6 +169,10 @@ def build_initial_state(
     Returns:
         A complete AgentState dict ready to invoke the compiled workflow.
     """
+    subject: Optional[str] = None
+    if paper_metadata and isinstance(paper_metadata, dict):
+        subject = paper_metadata.get("course_name") or None
+
     return AgentState(
         rag_chunks=rag_chunks,
         syllabus_context=syllabus_context,
@@ -185,6 +180,7 @@ def build_initial_state(
         rag_service=rag_service,
         topic_retrieval_debug={},
         syllabus_topics=[],
+        image_topic_map={},
         question_distribution=distribution,
         generated_questions=[],
         bloom_analysis=[],
@@ -196,4 +192,5 @@ def build_initial_state(
         errors=[],
         current_agent=None,
         status="initialized",
+        subject=subject,
     )

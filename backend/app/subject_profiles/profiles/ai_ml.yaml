@@ -1,0 +1,116 @@
+# ============================================================
+# Artificial Intelligence & Machine Learning Subject Profile
+#
+# Covers: Machine Learning, Deep Learning, AI, Data Science,
+#         NLP, Computer Vision, Reinforcement Learning,
+#         Neural Networks, Pattern Recognition, Data Mining
+#
+# Key design principle:
+#   - For EVERY algorithmic topic (Naive Bayes, KNN, K-Means,
+#     SVM, Decision Trees, Neural Networks, etc.) → MANDATE
+#     a numerical/calculation problem.
+#   - For comparative topics (supervised vs unsupervised,
+#     precision vs recall) → MANDATE a tabular comparison.
+#   - Pure theory topics (history of AI, ethics, definitions)
+#     → allow conceptual explanation only.
+# ============================================================
+
+subject_name: Artificial Intelligence and Machine Learning
+description: >
+  AI/ML disciplines covering machine learning algorithms, deep learning,
+  natural language processing, computer vision, reinforcement learning,
+  data preprocessing, model evaluation, and intelligent system design.
+
+question_styles:
+  - numerical_problem
+  - algorithm_trace_and_calculation
+  - tabular_comparison
+  - conceptual_explanation
+  - case_study_analysis
+  - step_by_step_derivation
+  - confusion_matrix_analysis
+  - compare_and_contrast
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Evaluate
+  - Create
+
+difficulty_distribution:
+  easy: 20
+  medium: 50
+  hard: 30
+
+question_guidelines:
+  - "2-mark questions: define ML terms OR state the formula for a metric (accuracy, precision, recall, F1)."
+  - "5-mark questions: EITHER compute a small numerical example (Naive Bayes classification, Euclidean distance for KNN, entropy for Decision Tree) OR compare two algorithms using a structured table."
+  - "10-mark questions: full algorithm trace on given data (K-Means clustering steps, Backpropagation forward pass, Decision Tree construction with information gain calculation) with at least 3 steps shown."
+  - "15-mark questions: end-to-end problem — given a dataset, apply the full ML pipeline: preprocessing → training → prediction → evaluation with confusion matrix and metrics."
+  - "NUMERICAL MANDATE — For every algorithmic topic found in source material, generate at least one numerical question per mark band that has a numerical solution (probability, distance, information gain, gradient, accuracy, etc.)."
+  - "TABULAR MANDATE — Comparison questions (e.g., supervised vs unsupervised, SVM vs Decision Tree, precision vs recall) MUST be answered in a comparison table with at least 4 criteria rows."
+  - "Confusion Matrix questions must provide the matrix values and ask to compute all derived metrics."
+  - "Dataset problems must specify the exact dataset rows (feature values) — never ask to classify 'some data'."
+  - "Probability problems (Naive Bayes, Bayesian Networks) must provide the frequency table or prior probabilities."
+  - "Do NOT ask students to code — ask for algorithmic steps, mathematical derivation, and computed results."
+
+answer_guidelines:
+  - "For Naive Bayes: show the frequency table, compute class-conditional probabilities, compute posteriors, state the classification result."
+  - "For KNN: compute Euclidean (or Manhattan) distances for ALL training samples, identify the K nearest neighbors, state the predicted class."
+  - "For K-Means: show each iteration — compute centroids, assign clusters, recompute centroids — until convergence."
+  - "For Decision Tree: compute entropy or Gini for each feature, compute information gain, select splitting attribute, draw the resulting tree."
+  - "For Neural Networks (Backpropagation): show forward pass (weighted sum + activation), compute output error, show backpropagation weight updates step by step."
+  - "For Linear Regression: show the normal equation or gradient descent steps, compute the regression line equation."
+  - "For SVM: compute the margin, identify support vectors, write the decision boundary equation."
+  - "For Confusion Matrix: display the matrix, then compute accuracy, precision, recall, F1-score, and specificity with formulas and values."
+  - "For PCA: show the covariance matrix, eigenvalues, eigenvectors, and reduced representation."
+  - "All numerical answers must show: given data → formula → substitution → computation → final answer."
+  - "Comparison tables must have: Feature | Algorithm A | Algorithm B format with ≥ 4 criteria."
+
+preferred_action_verbs:
+  - Calculate
+  - Classify (using)
+  - Trace
+  - Apply
+  - Construct (the tree / network)
+  - Compute
+  - Derive
+  - Compare (using a table)
+  - Analyze
+  - Evaluate
+  - Predict
+  - Design
+  - Explain with example
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Ask for Python/R code implementation"
+  - "Ask to 'train a model' without specifying the training data"
+  - "Numerical problems without providing the dataset or probability values"
+  - "Vague questions like 'Explain Machine Learning' for 10+ marks"
+  - "Comparison questions without at least 3 comparison criteria"
+
+numerical_required: true
+diagram_required: false
+
+subject_specific_instructions:
+  - "NAIVE BAYES: Always provide a frequency/probability table. Ask to classify a new instance step by step. Show prior P(C), likelihoods P(X|C), and posterior P(C|X). State the final class."
+  - "DECISION TREE: Provide a small tabular dataset (5-8 rows, 3-4 features). Ask to build the tree by computing information gain or Gini index at each node."
+  - "KNN: Provide training data with labeled points. Give a test point. Ask to classify it using K=3 (or specified K) by computing distances to all training points."
+  - "K-MEANS: Provide data points and initial centroids. Ask to perform 2-3 iterations showing cluster assignment and centroid update at each step."
+  - "NEURAL NETWORK: Provide network architecture (layers, weights, activation function). Give input values. Ask for forward propagation output calculation. For backprop: provide target output and ask for weight updates."
+  - "LINEAR REGRESSION: Provide a small dataset (x, y pairs). Ask to compute the regression equation using least squares. Predict for a new x value."
+  - "LOGISTIC REGRESSION: Provide feature values and weights. Ask to compute the sigmoid output and classify."
+  - "SVM: Provide labeled 2D data points. Ask to identify support vectors, compute margin, write the decision boundary."
+  - "CONFUSION MATRIX: Always provide the 2x2 or multiclass matrix with values. Ask to compute accuracy, precision, recall, F1. Show all formulas and substitutions."
+  - "EVALUATION METRICS: When asking about precision/recall/F1, always give numerical values to compute — never ask for just definitions in 5+ mark questions."
+  - "CLUSTERING (general): Specify the distance metric (Euclidean, Manhattan) and number of clusters K."
+  - "DEEP LEARNING: For forward propagation questions, specify exact weights, biases, and activation function (sigmoid, ReLU, tanh). Show exact numeric computation at each neuron."
+  - "NLP topics (TF-IDF, Bag of Words): provide a small corpus (2-3 sentences). Ask to compute TF, IDF, and TF-IDF scores for given terms."
+  - "REINFORCEMENT LEARNING: Provide a small grid world or state-action table. Ask to compute Q-values using given reward and discount factor."
+  - "For any algorithm trace question: provide EXACT data (numbers, not 'some dataset') so the question has a unique correct answer."
+  - "Always distribute questions across ALL units — do not cluster all numericals in one unit."
+
+prompt_template_override: null

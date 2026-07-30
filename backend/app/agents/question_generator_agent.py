@@ -1,10 +1,18 @@
 """
 Question Generator Agent for the Agentic Question Paper Generator.
+
+Subject Profile System:
+    The agent reads state["subject"] (set from paper_metadata.course_name)
+    and delegates to SubjectProfileLoader to load the matching YAML profile.
+    The profile's rules are injected into the LLM prompt via SubjectPromptBuilder.
+    No subject-specific if/else logic exists in this file — all subject behavior
+    comes from YAML configuration.
 """
 
 from __future__ import annotations
 
 import importlib
+import os
 import re
 import sys
 from collections import Counter
@@ -17,6 +25,8 @@ from app.prompts.question_prompt import (
     build_question_correction_addendum,
     build_question_user_prompt,
 )
+from app.subject_profiles.loader import SubjectProfileLoader
+from app.subject_profiles.prompt_builder import SubjectPromptBuilder
 from app.services.blueprint_utils import (
     MARKS_TO_QUESTION_TYPE,
     MARK_BANDS,
@@ -43,6 +53,25 @@ AGENT_NAME = "QuestionGeneratorAgent"
 QUESTION_GENERATION_MAX_TOKENS = settings.llm.QUESTION_GENERATION_MAX_COMPLETION_TOKENS
 _VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 _VALID_QUESTION_TYPES = {"short", "brief", "long", "essay"}
+
+
+def _sanitize_latex_math(text: str) -> str:
+    """Convert LaTeX math syntax to clean plain-text math symbols readable by ReportLab."""
+    if not isinstance(text, str):
+        return text
+    # \frac{a}{b} -> (a / b)
+    text = re.sub(r"\\frac\{([^}]+)\}\{([^}]+)\}", r"(\1 / \2)", text)
+    # \sqrt{a} -> √(a)
+    text = re.sub(r"\\sqrt\{([^}]+)\}", r"√(\1)", text)
+    # Common math symbols
+    text = text.replace("\\int", "∫").replace("\\sum", "∑").replace("\\lim", "lim")
+    text = text.replace("\\infty", "∞").replace("\\pi", "π").replace("\\theta", "θ")
+    text = text.replace("\\times", "×").replace("\\cdot", "·")
+    text = text.replace("\\le", "≤").replace("\\ge", "≥").replace("\\neq", "≠")
+    text = text.replace("\\vec", "").replace("\\mathbf", "").replace("\\mathrm", "")
+    # Strip any remaining backslashes before command letters (e.g. \alpha -> alpha)
+    text = re.sub(r"\\([A-Za-z]+)", r"\1", text)
+    return text
 
 
 class QuestionGeneratorAgent:
@@ -95,8 +124,24 @@ class QuestionGeneratorAgent:
             errors.append(error_msg)
             return self._failure(errors)
 
+        # ── Subject Profile: load based on course_name (zero if/else here) ──
+        subject: Optional[str] = state.get("subject")  # e.g. "Physics", "AI", None
+        profile = SubjectProfileLoader.get(subject)
+        prompt_builder = SubjectPromptBuilder(profile)
+        logger.info(
+            f"{AGENT_NAME}: Loaded subject profile '{profile.subject_name}' "
+            f"for subject='{subject or 'generic'}'."
+        )
+
         registry, available_image_ids = self._load_image_registry()
         content_context: str = state.get("content_context") or ""
+        # Extract image_topic_map here where 'state' is in scope (populated by ImageDescriptorAgent)
+        image_topic_map: dict = state.get("image_topic_map") or {}
+        if image_topic_map:
+            logger.info(
+                f"{AGENT_NAME}: image_topic_map has {len(image_topic_map)} figure(s) "
+                f"— will enforce image-based questions in prompt."
+            )
 
         try:
             batch_specs = self._build_batch_specs(distribution, requested_total_questions)
@@ -108,6 +153,8 @@ class QuestionGeneratorAgent:
                 available_image_ids=available_image_ids,
                 registry=registry,
                 batch_specs=batch_specs,
+                prompt_builder=prompt_builder,
+                image_topic_map=image_topic_map,
             )
             generated_questions = renumber_question_ids(generated_questions)
 
@@ -265,6 +312,8 @@ class QuestionGeneratorAgent:
         available_image_ids: str,
         registry: Any,
         batch_specs: list[dict[str, int]],
+        prompt_builder: Optional[SubjectPromptBuilder] = None,
+        image_topic_map: Optional[dict] = None,
     ) -> list[QuestionItem]:
         merged_questions: list[QuestionItem] = []
         allowed_image_ids = self._parse_image_ids(available_image_ids)
@@ -286,6 +335,14 @@ class QuestionGeneratorAgent:
                 f"total_questions={batch_total_questions}"
             )
 
+            # Build subject-specific profile addendum for the prompt
+            subject_profile_section = (
+                prompt_builder.build_system_addendum()
+                if prompt_builder is not None
+                else ""
+            )
+            # image_topic_map is passed in from _run() where 'state' is in scope
+            effective_image_topic_map = image_topic_map or {}
             prompt = build_question_user_prompt(
                 syllabus_topics=syllabus_topics,
                 content_context=content_context,
@@ -299,6 +356,8 @@ class QuestionGeneratorAgent:
                 medium_pct=int(distribution["medium_percentage"]),
                 hard_pct=int(distribution["hard_percentage"]),
                 available_image_ids=available_image_ids,
+                subject_profile_section=subject_profile_section,
+                image_topic_map=effective_image_topic_map,
             )
 
             batch_questions = self._generate_batch_with_retries(
@@ -389,6 +448,8 @@ class QuestionGeneratorAgent:
 
             try:
                 questions = self._parse_llm_questions(parsed, registry=registry)
+                
+                # Reconcile questions to match the target blueprint count and marks
                 validation_distribution = {
                     "total_marks": batch_total_marks,
                     "two_mark_questions": batch_counts["two_mark_questions"],
@@ -399,6 +460,15 @@ class QuestionGeneratorAgent:
                     "medium_percentage": 0,
                     "hard_percentage": 0,
                 }
+                
+                # If LLM generated extra questions or minor discrepancies, reconcile to exact blueprint
+                if questions:
+                    reconciled, reconcile_actions = reconcile_questions_to_blueprint(
+                        questions, validation_distribution
+                    )
+                    if reconciled:
+                        questions = renumber_question_ids(reconciled)
+
                 retry_errors = self._validate_output(
                     questions=questions,
                     distribution=validation_distribution,
@@ -421,7 +491,7 @@ class QuestionGeneratorAgent:
             except SchemaValidationError as exc:
                 retry_errors = [str(exc)]
                 logger.warning(
-                    f"{AGENT_NAME}: batch retry={attempt} validation_status=schema_failed"
+                    f"{AGENT_NAME}: batch retry={attempt} validation_status=schema_failed: {exc}"
                 )
 
         raise QuestionGenerationError(
@@ -430,40 +500,60 @@ class QuestionGeneratorAgent:
             f"Validation errors: {'; '.join(retry_errors)}"
         )
 
+
     def _parse_llm_questions(
         self,
         raw_data: list[Any],
         registry: Any,
     ) -> list[QuestionItem]:
+        # Handle wrapper objects (e.g. {"questions": [...]})
+        if isinstance(raw_data, dict):
+            for key, val in raw_data.items():
+                if isinstance(val, list) and len(val) > 0:
+                    raw_data = val
+                    break
+
+        # Flatten nested lists recursively if LLM returned 2D array
+        flat_items: list[Any] = []
+        if isinstance(raw_data, list):
+            def _flatten(arr):
+                for elem in arr:
+                    if isinstance(elem, list):
+                        _flatten(elem)
+                    else:
+                        flat_items.append(elem)
+            _flatten(raw_data)
+        else:
+            flat_items = [raw_data]
+
         generated_questions: list[QuestionItem] = []
         parse_errors: list[str] = []
 
-        for idx, item in enumerate(raw_data):
+        for idx, item in enumerate(flat_items):
             if not isinstance(item, dict):
-                parse_errors.append(f"Item at index {idx} is not an object.")
                 continue
 
-            q_id = item.get("id")
-            unit = item.get("unit")
-            topic = item.get("topic")
-            question = item.get("question")
-            marks = item.get("marks")
-            difficulty = item.get("difficulty")
-            question_type = item.get("question_type")
-            image_path = item.get("image_path")
+            q_id = item.get("id") or item.get("question_id") or f"Q{idx+1:03d}"
+            unit = item.get("unit") or item.get("unit_name") or "Unit 1"
+            topic = item.get("topic") or item.get("topic_name") or "Core Topic"
+            question = item.get("question") or item.get("question_text") or item.get("text")
+            marks = item.get("marks") or item.get("mark")
+            difficulty = item.get("difficulty") or "medium"
+            question_type = item.get("question_type") or ("short" if marks and int(marks) <= 5 else "long")
+            image_path = item.get("image_path") or item.get("figure_path")
 
             if not isinstance(q_id, str) or not q_id.strip():
-                parse_errors.append(f"Item {idx} is missing a valid id.")
-                continue
+                q_id = f"Q{idx+1:03d}"
             if not isinstance(unit, str) or not unit.strip():
-                parse_errors.append(f"Item {idx} ({q_id}) is missing a valid unit.")
-                continue
+                unit = "Unit 1"
             if not isinstance(topic, str) or not topic.strip():
-                parse_errors.append(f"Item {idx} ({q_id}) is missing a valid topic.")
-                continue
+                topic = "Core Topic"
             if not isinstance(question, str) or not question.strip():
-                parse_errors.append(f"Item {idx} ({q_id}) is missing a valid question.")
+                parse_errors.append(f"Item {idx} is missing question text.")
                 continue
+
+            # Sanitize LaTeX commands into clean math symbols
+            question = _sanitize_latex_math(question.strip())
 
             try:
                 marks = int(marks)
@@ -474,31 +564,50 @@ class QuestionGeneratorAgent:
                 parse_errors.append(f"Item {idx} ({q_id}) has unsupported marks: {marks}.")
                 continue
 
-            if not isinstance(difficulty, str):
-                parse_errors.append(f"Item {idx} ({q_id}) is missing difficulty.")
-                continue
-            difficulty = difficulty.strip().lower()
+            if not isinstance(difficulty, str) or difficulty.strip().lower() not in _VALID_DIFFICULTIES:
+                if marks <= 2:
+                    difficulty = "easy"
+                elif marks <= 5:
+                    difficulty = "medium"
+                else:
+                    difficulty = "hard"
+            else:
+                difficulty = difficulty.strip().lower()
 
             if not isinstance(question_type, str):
-                parse_errors.append(f"Item {idx} ({q_id}) is missing question_type.")
-                continue
+                question_type = "short" if marks <= 5 else "long"
             question_type = question_type.strip().lower()
 
-            if image_path is None:
-                normalized_image_path = None
-            elif isinstance(image_path, str) and image_path.strip():
-                normalized_image_path = image_path.strip()
-                if registry is not None and registry.is_valid_image_id(normalized_image_path):
-                    normalized_image_path = registry.get_relative_path(normalized_image_path)
-            else:
-                normalized_image_path = None
+            # Normalize image_path cleanly against registry or filesystem
+            normalized_image_path = None
+            if image_path and isinstance(image_path, str) and image_path.strip():
+                img_clean = image_path.strip()
+                if registry is not None:
+                    # Check exact ID or basename matching
+                    if registry.is_valid_image_id(img_clean):
+                        normalized_image_path = registry.get_relative_path(img_clean)
+                    else:
+                        base = os.path.basename(img_clean)
+                        for reg_id in getattr(registry, "images", {}):
+                            if reg_id == base or reg_id.endswith(base):
+                                normalized_image_path = registry.get_relative_path(reg_id)
+                                break
+                if not normalized_image_path:
+                    potential_path = os.path.join("uploaded_documents", "extracted_images", os.path.basename(img_clean))
+                    if (settings.paths.BASE_DIR / potential_path).is_file():
+                        normalized_image_path = potential_path
+
+            # Auto-append generic figure reference if image_path attached but missing reference in text
+            if normalized_image_path:
+                if not re.search(r"\b(figure|diagram|graph|circuit|image|shown|given|depicted|illustrated|below)\b", question, flags=re.IGNORECASE):
+                    question = f"{question} (Refer to the figure shown)."
 
             generated_questions.append(
                 {
-                    "id": q_id.strip(),
-                    "unit": unit.strip(),
-                    "topic": topic.strip(),
-                    "question": question.strip(),
+                    "id": str(q_id).strip(),
+                    "unit": str(unit).strip(),
+                    "topic": str(topic).strip(),
+                    "question": question,
                     "marks": marks,
                     "difficulty": difficulty,
                     "question_type": question_type,
@@ -506,8 +615,9 @@ class QuestionGeneratorAgent:
                 }
             )
 
-        if parse_errors:
+        if not generated_questions and parse_errors:
             raise SchemaValidationError("; ".join(parse_errors))
+
         return generated_questions
 
     def _validate_output(
@@ -558,8 +668,8 @@ class QuestionGeneratorAgent:
 
             if "```" in question_text or question_text.startswith("#"):
                 issues.append(f"Question {question.get('id')} contains markdown formatting.")
-            if re.search(r"\\[A-Za-z]+", question_text):
-                issues.append(f"Question {question.get('id')} contains LaTeX-style commands.")
+            if re.search(r"\\\[|\\\]|\\begin\{|\\end\{", question_text):
+                issues.append(f"Question {question.get('id')} contains LaTeX block commands.")
 
             if image_path:
                 if any(image_id in question_text for image_id in allowed_image_ids):

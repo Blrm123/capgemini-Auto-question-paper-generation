@@ -1,0 +1,76 @@
+# ============================================================
+# Civil Engineering Subject Profile
+# ============================================================
+
+subject_name: Civil Engineering
+description: >
+  Civil engineering disciplines covering structural analysis, soil mechanics,
+  geotechnical engineering, transportation engineering, hydraulics, construction
+  materials, surveying, environmental engineering, and concrete design.
+
+question_styles:
+  - numerical_problem
+  - design_problem
+  - diagram_based
+  - conceptual_explanation
+  - compare_and_contrast
+  - process_description
+
+blooms_preferences:
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 25
+  medium: 45
+  hard: 30
+
+question_guidelines:
+  - "2-mark questions: define terms, state IS code provisions, or list properties of materials."
+  - "5-mark questions: solve structural or geotechnical numerical problems with clear steps."
+  - "10-mark questions: complete structural analysis with load diagrams and results."
+  - "15-mark questions: design problem following IS code, with complete calculations and result verification."
+  - "Structural problems must provide loading conditions, span, and material properties."
+  - "Soil mechanics problems must specify soil type, index properties, and test conditions."
+  - "All numerical answers must include units (kN, kPa, MPa, mm, m)."
+  - "Design questions must reference applicable IS code sections where relevant."
+
+answer_guidelines:
+  - "For structural analysis: draw the free body diagram (describe it), write equilibrium equations, solve."
+  - "For soil mechanics: state the soil model used (Terzaghi, Rankine, etc.), apply formula, show working."
+  - "For concrete design: follow the IS 456 / IS 800 procedure systematically."
+  - "For hydraulics: specify flow type (open channel or pipe), apply continuity and energy equations."
+  - "All units must be consistent throughout the solution."
+
+preferred_action_verbs:
+  - Calculate
+  - Design
+  - Analyze
+  - Determine
+  - Derive
+  - Explain
+  - Describe
+  - Compute
+  - Evaluate
+  - Classify
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Structural problems without loading and span data"
+  - "Soil problems without soil parameters"
+  - "Design questions without IS code reference"
+
+numerical_required: true
+diagram_required: true
+
+subject_specific_instructions:
+  - "For structural analysis: always define the structural system (simply supported, cantilever, continuous)."
+  - "For soil mechanics: specify Atterberg limits or compaction test conditions if referenced."
+  - "For highway engineering: specify the design speed and terrain type."
+  - "For environmental engineering: specify standards (IS/WHO limits) for quality parameters."
+  - "For surveying: specify instrument type (theodolite, total station) and measurement method."
+
+prompt_template_override: null

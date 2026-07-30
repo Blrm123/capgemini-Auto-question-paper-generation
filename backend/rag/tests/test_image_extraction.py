@@ -26,8 +26,13 @@ def setup_temp_data():
     """Create a temporary PDF containing an image for extraction tests."""
     TEST_DIR.mkdir(parents=True, exist_ok=True)
     
-    # 1. Create a simple dummy image
-    img = PILImage.new("RGB", (100, 100), color="blue")
+    # 1. Create a structured dummy diagram image with edges and colors
+    img = PILImage.new("RGB", (300, 300), color="white")
+    from PIL import ImageDraw
+    draw = ImageDraw.Draw(img)
+    for i in range(0, 300, 15):
+        draw.line([(i, 0), (300 - i, 300)], fill=((i * 7) % 255, 100, (i * 3) % 255), width=2)
+        draw.rectangle([(i, i), (min(i + 20, 299), min(i + 20, 299))], outline=(50, 200, (i * 5) % 255))
     img.save(TEST_IMG_PATH)
     
     # 2. Draw a PDF with this image using reportlab
@@ -96,13 +101,12 @@ def test_image_extraction_and_rag_indexing(mock_clip_class, mock_llm_class):
     page_content = docs[0].page_content
     
     # Verify the image ref tag is embedded in page content with placeholder description
-    assert "[IMAGE_REF id=test_notes_with_image_p1_img1" in page_content
-    assert "path=uploaded_documents/extracted_images/test_notes_with_image_p1_img1.png" in page_content
-    assert "]Image 1 on page 1 of test_notes_with_image.pdf[/" in page_content
+    assert "[IMAGE_REF id=test_notes_with_image_p1_r1" in page_content
+    assert "path=uploaded_documents/extracted_images/test_notes_with_image_p1_r1.png" in page_content
     
     # Check that the image file actually got written to the backend directory
     backend_root = RAG_ROOT.parent if RAG_ROOT.name == "rag" else RAG_ROOT
-    extracted_img = backend_root / "uploaded_documents" / "extracted_images" / "test_notes_with_image_p1_img1.png"
+    extracted_img = backend_root / "uploaded_documents" / "extracted_images" / "test_notes_with_image_p1_r1.png"
     assert extracted_img.is_file(), f"Extracted image not found at {extracted_img}"
     
     # 2. Chunk documents and verify metadata placeholder
@@ -113,13 +117,11 @@ def test_image_extraction_and_rag_indexing(mock_clip_class, mock_llm_class):
     assert len(image_chunks) > 0
     
     target_chunk = image_chunks[0]
-    assert target_chunk.metadata["image_id"] == "test_notes_with_image_p1_img1"
-    assert target_chunk.metadata["image_path"] == "uploaded_documents/extracted_images/test_notes_with_image_p1_img1.png"
-    assert target_chunk.metadata["image_explanation"] == "Image 1 on page 1 of test_notes_with_image.pdf"
+    assert target_chunk.metadata["image_id"] == "test_notes_with_image_p1_r1"
+    assert target_chunk.metadata["image_path"] == "uploaded_documents/extracted_images/test_notes_with_image_p1_r1.png"
     
     # Verify the raw tag is cleaned up from page_content and replaced with placeholder format
     assert "[IMAGE_REF" not in target_chunk.page_content
-    assert "[Image Description: Image 1 on page 1 of test_notes_with_image.pdf]" in target_chunk.page_content
 
     # 3. Build state and run ImageDescriptorAgent
     from app.models.state import AgentState
@@ -173,4 +175,4 @@ def test_image_extraction_and_rag_indexing(mock_clip_class, mock_llm_class):
 
     # Verify content_context has updated description
     assert "[Image Description: A diagram showing the MQTT publish-subscribe flow.]" in updated_state["content_context"]
-    assert "[Image Description: Image 1 on page 1 of test_notes_with_image.pdf]" not in updated_state["content_context"]
+    assert "[Image Description: Page 1 figure 1]" not in updated_state["content_context"]

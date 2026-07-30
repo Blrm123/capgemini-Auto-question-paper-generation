@@ -50,9 +50,11 @@ def _is_academic_image(pil_img):
     if w < 60 or h < 60:
         return False, f"too small ({w}x{h})"
 
-    # 2. Reject full-page background masks (watermarks etc.)
+    # 2. Reject full-page background masks (watermarks etc.) and textbook covers
     if w > 2000 or h > 2800:
         return False, f"full-page background ({w}x{h})"
+    if w > 1000 and h > 1200:
+        return False, f"full-page scan or cover ({w}x{h})"
 
     # Convert to RGB for consistent analysis
     rgb = pil_img.convert("RGB")
@@ -96,6 +98,11 @@ def _is_academic_image(pil_img):
     aspect = h / w if w > 0 else 1
     if aspect > 3.0 and w < 200:
         return False, f"barcode-like dimensions ({w}x{h}, aspect={aspect:.1f})"
+
+    # 7. Reject decorative banners (extreme aspect ratios)
+    ratio = max(w / h, h / w) if min(w, h) > 0 else 1.0
+    if ratio > 3.5:
+        return False, f"extreme aspect ratio - likely a decorative banner ({w}x{h}, aspect={ratio:.1f})"
 
     return True, ""
 

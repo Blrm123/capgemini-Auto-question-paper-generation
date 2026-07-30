@@ -121,8 +121,8 @@ class AgentState(TypedDict):
     Central state object shared across all LangGraph nodes.
 
     Lifecycle:
-      rag_chunks  →  syllabus_topics  →  generated_questions
-      →  bloom_analysis  →  validated_questions
+      rag_chunks  →  syllabus_topics  →  image_topic_map
+      →  generated_questions  →  bloom_analysis  →  validated_questions
       →  answer_key  →  final_pdf_path
     """
 
@@ -135,6 +135,11 @@ class AgentState(TypedDict):
 
     # ---- Syllabus Agent output ----
     syllabus_topics: List[SyllabusTopic]            # Structured units & topics
+
+    # ---- Image Descriptor Agent output ----
+    # Keyed by image_id. Each entry has: concept, unit_hint, components,
+    # learning_objective, exam_q1, exam_q2, description, image_path
+    image_topic_map: Dict[str, Any]
 
     # ---- Question Generator input params ----
     question_distribution: Optional[QuestionDistribution]
@@ -164,3 +169,8 @@ class AgentState(TypedDict):
     # ---- Workflow status ----
     current_agent: Optional[str]                    # Name of the agent currently running
     status: str                                     # initialized / running / completed / failed
+
+    # ---- Subject Profile (injected by orchestrator from paper_metadata) ----
+    subject: Optional[str]                          # e.g. "Physics", "Computer Science", None → generic
+
+

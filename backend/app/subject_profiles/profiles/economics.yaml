@@ -1,0 +1,80 @@
+# ============================================================
+# Economics Subject Profile
+# ============================================================
+
+subject_name: Economics
+description: >
+  Economic theory and applied economics covering microeconomics, macroeconomics,
+  managerial economics, econometrics, international trade, monetary policy,
+  and economic development.
+
+question_styles:
+  - conceptual_explanation
+  - analytical_discussion
+  - numerical_problem
+  - case_study_analysis
+  - diagram_based
+  - compare_and_contrast
+  - short_definition
+
+blooms_preferences:
+  - Understand
+  - Apply
+  - Analyze
+  - Evaluate
+
+difficulty_distribution:
+  easy: 30
+  medium: 45
+  hard: 25
+
+question_guidelines:
+  - "2-mark questions: define economic terms or state economic laws with examples."
+  - "5-mark questions: explain a concept with economic reasoning or solve a simple numerical."
+  - "10-mark questions: analytical question requiring argument, diagram, and real-world application."
+  - "15-mark questions: comprehensive policy analysis, multi-part economic analysis, or case study."
+  - "Diagram-based questions (supply-demand, IS-LM, PPC) must reference 'the diagram shown'."
+  - "Numerical economics problems (elasticity, GDP calculation, multiplier) must show all steps."
+  - "Arguments must be supported with economic theory — no unsupported assertions."
+  - "Use correct economic terminology (ceteris paribus, equilibrium, marginal analysis)."
+
+answer_guidelines:
+  - "Conceptual answers must include: definition, theoretical explanation, graphical analysis (description), and real-world example."
+  - "For policy analysis: identify the policy tool, explain the transmission mechanism, and discuss limitations."
+  - "For numerical problems: state the formula, substitute values, compute, and interpret the result."
+  - "For diagram descriptions: state what shifts, in which direction, and what the new equilibrium is."
+  - "Critical analysis must present at least one counter-argument or limitation."
+
+preferred_action_verbs:
+  - Define
+  - Explain
+  - Analyze
+  - Discuss
+  - Evaluate
+  - Compare
+  - Illustrate
+  - Examine
+  - Critically assess
+  - Derive (mathematically)
+  - Calculate
+  - Interpret
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Questions requiring current real-world data not in source material"
+  - "Questions about specific companies not mentioned in source"
+  - "Political opinion questions disguised as economics"
+
+numerical_required: false
+diagram_required: false
+
+subject_specific_instructions:
+  - "Ceteris paribus assumption must be stated wherever other factors are held constant."
+  - "Short-run vs long-run must be specified when the time horizon matters."
+  - "For elasticity questions: specify price, income, or cross-price elasticity."
+  - "For monetary policy: specify whether the central bank is targeting inflation, output, or exchange rate."
+  - "For international trade: specify the trade model (comparative advantage, Heckscher-Ohlin) being applied."
+
+prompt_template_override: null

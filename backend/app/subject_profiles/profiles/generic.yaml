@@ -1,0 +1,110 @@
+# ============================================================
+# Generic Subject Profile — Universal Academic Fallback
+#
+# This profile is automatically used for ANY subject that does
+# not have a dedicated YAML file. It is designed to handle:
+#   - Artificial Intelligence / Machine Learning
+#   - Data Science / Analytics
+#   - Natural Language Processing / Deep Learning
+#   - Management / Business Administration
+#   - History / Political Science / Sociology
+#   - Law / Ethics / Philosophy
+#   - Environmental Science / Geography
+#   - Any other academic domain
+#
+# It is intentionally broad but still professionally structured
+# to produce high-quality, academically rigorous questions.
+# ============================================================
+
+subject_name: Generic Academic Subject
+description: >
+  A universal academic subject profile suitable for any discipline not covered
+  by a dedicated profile, including AI, ML, Data Science, Management, Social
+  Sciences, Humanities, Law, and emerging interdisciplinary fields.
+
+question_styles:
+  - conceptual_explanation
+  - analytical_discussion
+  - case_study_analysis
+  - compare_and_contrast
+  - definition_with_examples
+  - application_scenario
+  - short_answer
+  - long_essay
+
+blooms_preferences:
+  - Understand
+  - Apply
+  - Analyze
+  - Evaluate
+  - Create
+
+difficulty_distribution:
+  easy: 30
+  medium: 45
+  hard: 25
+
+question_guidelines:
+  - "Questions must be directly grounded in the provided source material — do NOT invent facts."
+  - "2-mark questions must test recall of key terms, definitions, or foundational concepts."
+  - "5-mark questions must require explanation or application with at least two distinct points."
+  - "10-mark questions must require detailed analysis, comparison, or structured argument (minimum 4–5 key points)."
+  - "15-mark questions must be essay-level requiring synthesis, critical evaluation, or design — minimum 6–8 key points with sub-structure."
+  - "Distribute questions across all provided units/modules — no unit should be left without at least one question."
+  - "Do not repeat the same concept across multiple questions; each question must test a distinct idea."
+  - "Use specific terminology from the source material."
+  - "Questions must be clear, unambiguous, and actionable."
+  - "For application questions, provide realistic real-world scenarios relevant to the subject."
+
+answer_guidelines:
+  - "Model answers must be complete and exam-ready — not summaries or bullet lists alone."
+  - "For definition questions: provide a precise definition followed by at least two illustrative examples."
+  - "For explanation questions: define the concept, explain the mechanism or process, and cite real-world relevance."
+  - "For analysis/comparison questions: identify specific criteria of comparison and address each systematically."
+  - "For essay questions: include introduction, structured body with headings/points, and conclusion."
+  - "Key points must be specific, measurable grading criteria — avoid vague descriptors like 'good explanation'."
+  - "Marks breakdown must be itemized and sum to the total marks for the question."
+
+preferred_action_verbs:
+  - Define
+  - Explain
+  - Describe
+  - Discuss
+  - Analyze
+  - Compare
+  - Contrast
+  - Evaluate
+  - Justify
+  - Illustrate
+  - Apply
+  - Examine
+  - Summarize
+  - Critically assess
+  - Design
+  - Formulate
+
+forbidden_patterns:
+  - "Fill in the blank"
+  - "True or False"
+  - "Multiple choice"
+  - "Yes or No questions"
+  - "List without explanation (for 5+ mark questions)"
+  - "Questions that require knowledge outside the provided source material"
+  - "Trivial questions that can be answered in one word for 10+ mark questions"
+
+numerical_required: false
+diagram_required: false
+
+subject_specific_instructions:
+  - "This is a generic profile. Generate questions that are appropriate to the specific domain found in the source material."
+  - "NUMERICAL PREFERENCE: If the source material contains ANY formulas, equations, algorithms, calculations, or quantitative methods — include at least one numerical problem per mark band (5M, 10M, 15M). Do NOT skip numericals just because the profile is generic."
+  - "TABULAR PREFERENCE: For any comparison topic (two techniques, two approaches, two models, two systems), generate the question as a structured table comparison with at least 4 criteria rows in the model answer."
+  - "If the source material contains AI/ML concepts (algorithms, models, probability, classification): generate numericals — compute probabilities, trace algorithms on given data, calculate metrics."
+  - "If the source material contains management/business content: use case studies, quantitative business analysis (market share, cost-benefit), and scenario-based questions."
+  - "If the source material contains engineering/technical content: include design or calculation problems."
+  - "If the source material contains social science/humanities content: use analytical, critical-thinking, and essay questions — numericals are not forced here."
+  - "For pure theory subjects (history, philosophy, law, literature): do NOT force numericals — use conceptual explanation and critical analysis questions instead."
+  - "Ensure questions span cognitive levels from recall (2-mark) to synthesis and evaluation (15-mark)."
+  - "Always infer the appropriate question style from the ACTUAL content in the source material — do not use a one-size-fits-all approach."
+
+prompt_template_override: null

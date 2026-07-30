@@ -23,19 +23,73 @@ load_dotenv(BASE_DIR / "env", override=True)
 
 
 # ---------------------------------------------------------------------------
-# Groq LLM Configuration
+# Google Gemini Configuration (Primary LLM Provider)
+# ---------------------------------------------------------------------------
+class GeminiConfig:
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL_NAME: str = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-flash-lite")
+
+    # Per-agent model configuration (Editable via .env)
+    MODEL_PDF_PARSER: str = os.getenv("MODEL_PDF_PARSER", "gemini-3.5-flash-lite")
+    MODEL_SYLLABUS_AGENT: str = os.getenv("MODEL_SYLLABUS_AGENT", "gemini-3.5-flash-lite")
+    MODEL_QUESTION_GENERATOR: str = os.getenv("MODEL_QUESTION_GENERATOR", "gemini-3.5-flash-lite")
+    MODEL_BLOOM_AGENT: str = os.getenv("MODEL_BLOOM_AGENT", "gemini-3.1-flash-lite")
+    MODEL_VALIDATION_AGENT: str = os.getenv("MODEL_VALIDATION_AGENT", "gemini-3.1-flash-lite")
+    MODEL_DIFFICULTY_CLASSIFIER: str = os.getenv("MODEL_DIFFICULTY_CLASSIFIER", "gemini-3.1-flash-lite")
+    MODEL_DUPLICATE_DETECTOR: str = os.getenv("MODEL_DUPLICATE_DETECTOR", "gemini-3.1-flash-lite")
+    MODEL_ANSWER_KEY_AGENT: str = os.getenv("MODEL_ANSWER_KEY_AGENT", "gemini-3.5-flash-lite")
+
+    @classmethod
+    def get_model_for_agent(cls, agent_name: str) -> str:
+        """Resolve model name configured in .env for a given agent/task."""
+        mapping = {
+            "PDFParser": cls.MODEL_PDF_PARSER,
+            "ImageDescriptorAgent": cls.MODEL_PDF_PARSER,
+            "SyllabusAgent": cls.MODEL_SYLLABUS_AGENT,
+            "QuestionGeneratorAgent": cls.MODEL_QUESTION_GENERATOR,
+            "BloomAgent": cls.MODEL_BLOOM_AGENT,
+            "ValidationAgent": cls.MODEL_VALIDATION_AGENT,
+            "DifficultyClassifier": cls.MODEL_DIFFICULTY_CLASSIFIER,
+            "DuplicateDetector": cls.MODEL_DUPLICATE_DETECTOR,
+            "AnswerKeyAgent": cls.MODEL_ANSWER_KEY_AGENT,
+        }
+        val = mapping.get(agent_name)
+        if val and val.strip():
+            return val.strip()
+        return cls.GEMINI_MODEL_NAME
+
+    @classmethod
+    def is_available(cls) -> bool:
+        """True if a Gemini API key is configured."""
+        return bool(cls.GEMINI_API_KEY.strip())
+
+    @classmethod
+    def validate(cls) -> None:
+        """Raise if Gemini is selected as provider but key is missing."""
+        if not cls.GEMINI_API_KEY:
+            raise EnvironmentError(
+                "GEMINI_API_KEY is not set. "
+                "Get a free key at https://aistudio.google.com/app/apikey "
+                "and add it to your .env file."
+            )
+
+
+# ---------------------------------------------------------------------------
+# Groq LLM Configuration (Fallback Provider)
 # ---------------------------------------------------------------------------
 class LLMConfig:
     GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
     MODEL_NAME: str = os.getenv("MODEL_NAME", "llama-3.3-70b-versatile")
     USE_VISION_MODEL: bool = os.getenv("USE_VISION_MODEL", "true").lower() == "true"
 
-    # Comma-separated Groq models to rotate through on rate limits or model errors
+    # FALLBACK_MODELS: only add models here if you want context-aware fallback.
+    # WARNING: switching to a smaller model (e.g. 8b) during generation breaks
+    # context quality. Leave empty to retry on the same model with delay instead.
     FALLBACK_MODELS: list[str] = [
         model.strip()
         for model in os.getenv(
             "FALLBACK_MODELS",
-            "llama-3.3-70b-versatile,llama-3.1-8b-instant",
+            "llama-3.3-70b-versatile",
         ).split(",")
         if model.strip()
     ]
@@ -58,11 +112,12 @@ class LLMConfig:
 
     @classmethod
     def validate(cls) -> None:
-        """Raise if critical LLM config is missing."""
+        """Raise if Groq is the selected provider but key is missing."""
         if not cls.GROQ_API_KEY:
             raise EnvironmentError(
-                "GROQ_API_KEY is not set. "
-                "Please add it to your .env file."
+                "GROQ_API_KEY is not set and GEMINI_API_KEY is also not set. "
+                "Please add at least one LLM API key to your .env file. "
+                "Recommended: Set GEMINI_API_KEY (free at https://aistudio.google.com/app/apikey)."
             )
 
 
@@ -178,6 +233,7 @@ class GoogleConfig:
 # ---------------------------------------------------------------------------
 class Settings:
     llm = LLMConfig
+    gemini = GeminiConfig
     paths = PathConfig
     log = LogConfig
     api = APIConfig
@@ -191,7 +247,16 @@ class Settings:
         Call once at application startup in main.py.
         """
         cls.paths.ensure_directories()
-        cls.llm.validate()
+        # Validate whichever provider is active
+        if cls.gemini.is_available():
+            cls.gemini.validate()
+        else:
+            cls.llm.validate()
+
+    @classmethod
+    def active_provider(cls) -> str:
+        """Returns 'gemini' if Gemini API key is set, else 'groq'."""
+        return "gemini" if cls.gemini.is_available() else "groq"
 
 
 # Singleton-style export
