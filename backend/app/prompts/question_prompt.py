@@ -33,18 +33,20 @@ REQUIRED JSON SCHEMA
 ================================================
 Every object in the array MUST have exactly these 8 fields:
 
-{
   "id":            "Q001",           <- Sequential, zero-padded: Q001, Q002, Q003, ...
   "unit":          "Unit 1: ...",    <- Exact unit name from syllabus
   "topic":         "...",            <- Specific topic from that unit
   "question":      "...",            <- Full question text - complete sentence(s)
-  "marks":         2,                <- Integer: 2, 5, 10, or 15
+  "marks":         2,                <- Integer: 1, 2, 5, 10, or 15
   "difficulty":    "easy",           <- Exactly: easy | medium | hard
-  "question_type": "short",          <- Exactly: short (2M) | brief (5M) | long (10M) | essay (15M)
-  "image_path":    null              <- null, or a valid relative path from ACADEMIC FIGURES section
+  "question_type": "short",          <- Exactly: mcq (1M) | short (2M) | brief (5M) | long (10M) | essay (15M)
+  "image_path":    null,             <- null, or a valid relative path from ACADEMIC FIGURES section
+  "options":       ["A) ...", "B) ...", "C) ...", "D) ..."], <- Array of exactly 4 strings for 1-mark MCQs, otherwise null
+  "correct_answer":"A) ..."          <- The exact string of the correct option for 1-mark MCQs, otherwise null
 }
 
 question_type mapping (STRICT - no exceptions):
+  - 1-mark  -> "mcq"
   - 2-mark  -> "short"
   - 5-mark  -> "brief"
   - 10-mark -> "long"
@@ -64,6 +66,7 @@ QUESTION QUALITY RULES
    it without any external reference not provided in the exam paper.
 
 4. PROPORTIONALITY - Question depth must match marks:
+   - 1-mark  (mcq):    Multiple Choice Question. Must include exactly 4 plausible options in `options`, and indicate the answer in `correct_answer`.
    - 2-mark  (short):  One focused concept. Answerable in 2-3 sentences.
    - 5-mark  (brief):  2-3 key points required. Requires explanation or computation.
    - 10-mark (long):   4-6 structured points. Requires analysis or multi-step work.
@@ -148,6 +151,7 @@ EXAMINATION BLUEPRINT (MANDATORY - EXACT)
 ==============================================
 Total Marks:           {total_marks}
 Total Questions:       {total_questions}
+  - 1-mark  questions: {one_mark_count}   (type: "mcq")
   - 2-mark  questions: {two_mark_count}   (type: "short")
   - 5-mark  questions: {five_mark_count}   (type: "brief")
   - 10-mark questions: {ten_mark_count}   (type: "long")
@@ -162,10 +166,11 @@ Target difficulty distribution:
 GENERATION CONTRACT - FOLLOW EXACTLY
 ==============================================
 1. Generate EXACTLY {total_questions} questions - no more, no fewer.
-2. Generate EXACTLY {two_mark_count} questions with marks=2.
-3. Generate EXACTLY {five_mark_count} questions with marks=5.
-4. Generate EXACTLY {ten_mark_count} questions with marks=10.
-5. Generate EXACTLY {fifteen_mark_count} questions with marks=15.
+2. Generate EXACTLY {one_mark_count} questions with marks=1.
+3. Generate EXACTLY {two_mark_count} questions with marks=2.
+4. Generate EXACTLY {five_mark_count} questions with marks=5.
+5. Generate EXACTLY {ten_mark_count} questions with marks=10.
+6. Generate EXACTLY {fifteen_mark_count} questions with marks=15.
 6. Total marks must sum to {total_marks}.
 7. IDs must be sequential: Q001, Q002, Q003, ... Q{total_questions:03d}.
 8. Every question must be traceable to a specific unit and topic from the syllabus above.
@@ -197,7 +202,7 @@ STRICT REQUIREMENTS FOR CORRECTION:
 - The corrected array MUST still satisfy exactly:
     Total Marks:    {total_marks}
     Total Questions: {total_questions}
-    2-mark:  {two_mark_count}  |  5-mark: {five_mark_count}  |  10-mark: {ten_mark_count}  |  15-mark: {fifteen_mark_count}
+    1-mark:  {one_mark_count}  |  2-mark:  {two_mark_count}  |  5-mark: {five_mark_count}  |  10-mark: {ten_mark_count}  |  15-mark: {fifteen_mark_count}
 - Do NOT explain your corrections. Output ONLY the corrected JSON array.
 - Preserve all valid questions from the previous attempt where possible.
 - Only replace or fix the questions that caused the validation errors.
@@ -266,6 +271,7 @@ def build_question_user_prompt(
     content_context: str,
     total_marks: int,
     total_questions: int,
+    one_mark_count: int,
     two_mark_count: int,
     five_mark_count: int,
     ten_mark_count: int,
@@ -286,6 +292,7 @@ def build_question_user_prompt(
                                Capped at 6000 chars to prevent token overflow.
         total_marks:           Total exam marks.
         total_questions:       Total questions to generate.
+        one_mark_count:        Number of 1-mark questions.
         two_mark_count:        Number of 2-mark questions.
         five_mark_count:       Number of 5-mark questions.
         ten_mark_count:        Number of 10-mark questions.
@@ -326,6 +333,7 @@ def build_question_user_prompt(
         academic_figures_section=academic_figures_section,
         total_marks=total_marks,
         total_questions=total_questions,
+        one_mark_count=one_mark_count,
         two_mark_count=two_mark_count,
         five_mark_count=five_mark_count,
         ten_mark_count=ten_mark_count,
@@ -341,6 +349,7 @@ def build_question_correction_addendum(
     issues: list[str],
     total_marks: int,
     total_questions: int,
+    one_mark_count: int,
     two_mark_count: int,
     five_mark_count: int,
     ten_mark_count: int,
@@ -352,6 +361,7 @@ def build_question_correction_addendum(
         issues=issues_text,
         total_marks=total_marks,
         total_questions=total_questions,
+        one_mark_count=one_mark_count,
         two_mark_count=two_mark_count,
         five_mark_count=five_mark_count,
         ten_mark_count=ten_mark_count,

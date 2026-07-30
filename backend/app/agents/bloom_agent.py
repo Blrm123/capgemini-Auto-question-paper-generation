@@ -219,6 +219,14 @@ class BloomAgent:
             image_path = None
             if q_id in input_by_id:
                 image_path = input_by_id[q_id].get("image_path")
+                
+            options = item.get("options")
+            if not options and q_id in input_by_id:
+                options = input_by_id[q_id].get("options")
+                
+            correct_answer = item.get("correct_answer")
+            if not correct_answer and q_id in input_by_id:
+                correct_answer = input_by_id[q_id].get("correct_answer")
 
             bloom_analysis.append(
                 BloomItem(
@@ -229,6 +237,8 @@ class BloomAgent:
                     bloom_level=normalised_level,
                     bloom_justification=bloom_justification.strip(),
                     image_path=image_path,
+                    options=options if isinstance(options, list) and len(options) == 4 else None,
+                    correct_answer=str(correct_answer).strip() if correct_answer else None,
                 )
             )
 
@@ -248,6 +258,8 @@ class BloomAgent:
                         bloom_level=h_level,
                         bloom_justification=h_just,
                         image_path=q.get("image_path"),
+                        options=q.get("options"),
+                        correct_answer=q.get("correct_answer"),
                     )
                 )
                 seen_ids.add(q_id)

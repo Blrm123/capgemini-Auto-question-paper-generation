@@ -441,7 +441,14 @@ class PDFGenerator:
         # 6. Strip $ characters used for math wrapping
         text = text.replace('$', '')
         
-        # 7. Preserve explicit line breaks for multi-line text (e.g. matrix rows, lists)
+        # 7. Parse Markdown bold and italic
+        text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+        text = re.sub(r'\*([^\*]+)\*', r'<i>\1</i>', text)
+        
+        # 8. Format Markdown bullet points nicely
+        text = re.sub(r'(?m)^[-*]\s+', '&bull; ', text)
+        
+        # 9. Preserve explicit line breaks for multi-line text (e.g. matrix rows, lists)
         text = text.replace('\r\n', '\n').replace('\n', '<br/>')
         
         return text
@@ -829,10 +836,41 @@ class PDFGenerator:
         values = dict(self._question_columns(question))
         label = f"{sequence}."
         question_text = self._format_text(str(question.get("question") or ""))
+        question_flowables = [Paragraph(question_text, self.styles["question"])]
+        
+        options = question.get("options")
+        if options and isinstance(options, list) and len(options) == 4:
+            # Render MCQ options in a 2x2 grid (A and B on line 1, C and D on line 2)
+            opt_table_data = [
+                [
+                    Paragraph(self._format_text(str(options[0])), self.styles["question"]),
+                    Paragraph(self._format_text(str(options[1])), self.styles["question"])
+                ],
+                [
+                    Paragraph(self._format_text(str(options[2])), self.styles["question"]),
+                    Paragraph(self._format_text(str(options[3])), self.styles["question"])
+                ]
+            ]
+            
+            # width constraint for the 2 cells (half of the question text width)
+            text_col_width = self._question_column_widths(len(column_labels))[1]
+            opt_col_width = (text_col_width - 15) / 2.0
+            
+            opt_table = Table(opt_table_data, colWidths=[opt_col_width, opt_col_width], hAlign="LEFT")
+            opt_table.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+            ]))
+            question_flowables.append(Spacer(1, 4))
+            question_flowables.append(opt_table)
+            question_flowables.append(Spacer(1, 4))
+
         row = [
             Paragraph(f"<b>{label}</b>", self.styles["question"]),
-            Paragraph(question_text, self.styles["question"]),
-            *[Paragraph(values.get(label, ""), self.styles["question"]) for label in column_labels],
+            question_flowables,
+            *[Paragraph(values.get(col, ""), self.styles["question"]) for col in column_labels],
         ]
         question_table = Table([row], colWidths=self._question_column_widths(len(column_labels)), hAlign="LEFT")
         question_table.setStyle(TableStyle([

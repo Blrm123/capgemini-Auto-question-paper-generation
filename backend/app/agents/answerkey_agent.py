@@ -28,7 +28,7 @@ logger = setup_logger(__name__)
 AGENT_NAME = "AnswerKeyAgent"
 
 # Valid marks — used to validate preserved marks in LLM response
-_VALID_MARKS = {2, 5, 10, 15}
+_VALID_MARKS = {1, 2, 5, 10, 15}
 
 
 class AnswerKeyAgent:

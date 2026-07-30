@@ -144,6 +144,7 @@ Validate and improve the following exam question paper.
 EXAMINATION TARGET BLUEPRINT
 ══════════════════════════════════════════════
 Total Marks:    {total_marks}
+1-mark  count:  {one_mark_count}
 2-mark  count:  {two_mark_count}
 5-mark  count:  {five_mark_count}
 10-mark count:  {ten_mark_count}
@@ -181,10 +182,11 @@ YOUR TASK
 # ─────────────────────────────────────────────────────────────────────────────
 
 def build_validation_user_prompt(
-    bloom_analysis: list,
-    syllabus_topics: list,
+    bloom_analysis: list[dict],
+    syllabus_topics: list[dict],
     content_context: str,
     total_marks: int,
+    one_mark_count: int,
     two_mark_count: int,
     five_mark_count: int,
     ten_mark_count: int,
@@ -215,6 +217,7 @@ def build_validation_user_prompt(
 
     return VALIDATION_USER_PROMPT_TEMPLATE.format(
         total_marks=total_marks,
+        one_mark_count=one_mark_count,
         two_mark_count=two_mark_count,
         five_mark_count=five_mark_count,
         ten_mark_count=ten_mark_count,

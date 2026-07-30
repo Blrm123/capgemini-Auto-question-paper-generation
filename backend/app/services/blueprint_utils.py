@@ -11,6 +11,7 @@ from typing import Any
 
 # Mark value ↔ distribution field names (matches QuestionDistribution schema)
 MARK_BANDS: tuple[tuple[int, str], ...] = (
+    (1, "one_mark_questions"),
     (2, "two_mark_questions"),
     (5, "five_mark_questions"),
     (10, "ten_mark_questions"),
@@ -21,13 +22,13 @@ VALID_MARK_VALUES: frozenset[int] = frozenset(mark for mark, _ in MARK_BANDS)
 
 MARKS_TO_QUESTION_TYPE: dict[int, str] = {
     mark: question_type
-    for mark, question_type in ((2, "short"), (5, "brief"), (10, "long"), (15, "essay"))
+    for mark, question_type in ((1, "mcq"), (2, "short"), (5, "brief"), (10, "long"), (15, "essay"))
 }
 
 
 def expected_marks_counts(distribution: dict[str, Any]) -> dict[int, int]:
     """Return expected question count per mark value from the distribution."""
-    return {mark: int(distribution[field]) for mark, field in MARK_BANDS}
+    return {mark: int(distribution.get(field, 0)) for mark, field in MARK_BANDS}
 
 
 def expected_total_questions(distribution: dict[str, Any]) -> int:

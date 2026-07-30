@@ -49,6 +49,11 @@ REQUIRED JSON SCHEMA
 ANSWER DEPTH REQUIREMENTS BY MARKS
 ════════════════════════════════════════════════
 
+1-mark answers (mcq):
+  • State the correct option clearly.
+  • Provide a 1-2 sentence justification for why the option is correct.
+  • Marks breakdown: "1 mark for correct option"
+
 2-mark answers (short):
   • Clear, precise definition or statement (1 mark) + 1 illustrative example or
     additional clarifying point (1 mark).
@@ -96,7 +101,10 @@ CRITICAL RULES FOR NUMERICAL/MATHEMATICAL QUESTIONS
 ════════════════════════════════════════════════
 TEXT FORMATTING RULES
 ════════════════════════════════════════════════
-• Plain text ONLY. No LaTeX, no Markdown headers, no backslash commands.
+• You MUST use standard Markdown formatting to make the answer perfectly readable:
+    - Use `**bold**` for emphasizing key terms or final answers.
+    - Use bullet points (`- `) or numbered lists (`1. `) for ANY step-by-step derivation, numerical logic, or multi-part explanation.
+• Do NOT output a giant wall of text. Break it up with bullet points.
 • Mathematical notation in plain text:
     Multiplication: ×
     Division: ÷

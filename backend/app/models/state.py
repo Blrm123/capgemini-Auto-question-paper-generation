@@ -19,10 +19,12 @@ class QuestionItem(TypedDict):
     unit: str
     topic: str
     question: str
-    marks: int                  # 2 / 5 / 10 / 15
+    marks: int                  # 1 / 2 / 5 / 10 / 15
     difficulty: str             # easy / medium / hard
-    question_type: str          # short / long / descriptive
+    question_type: str          # mcq / short / long / descriptive
     image_path: Optional[str]
+    options: Optional[List[str]]
+    correct_answer: Optional[str]
 
 
 
@@ -35,6 +37,8 @@ class BloomItem(TypedDict):
     bloom_level: str            # Remember / Understand / Apply / Analyze / Evaluate / Create
     bloom_justification: str
     image_path: Optional[str]
+    options: Optional[List[str]]
+    correct_answer: Optional[str]
 
 
 
@@ -49,6 +53,8 @@ class ValidatedQuestion(TypedDict):
     bloom_level: str
     question_type: str
     image_path: Optional[str]
+    options: Optional[List[str]]
+    correct_answer: Optional[str]
 
 
 
@@ -91,6 +97,7 @@ class QuestionDistribution(TypedDict):
     and the overall difficulty split.
     """
     total_marks: int
+    one_mark_questions: int
     two_mark_questions: int
     five_mark_questions: int
     ten_mark_questions: int

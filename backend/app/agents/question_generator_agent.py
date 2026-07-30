@@ -52,7 +52,7 @@ logger = setup_logger(__name__)
 AGENT_NAME = "QuestionGeneratorAgent"
 QUESTION_GENERATION_MAX_TOKENS = settings.llm.QUESTION_GENERATION_MAX_COMPLETION_TOKENS
 _VALID_DIFFICULTIES = {"easy", "medium", "hard"}
-_VALID_QUESTION_TYPES = {"short", "brief", "long", "essay"}
+_VALID_QUESTION_TYPES = {"mcq", "short", "brief", "long", "essay"}
 
 
 def _sanitize_latex_math(text: str) -> str:
@@ -276,19 +276,21 @@ class QuestionGeneratorAgent:
         if total_questions <= settings.llm.QUESTION_BATCH_THRESHOLD:
             return [
                 {
-                    "two_mark_questions": int(distribution["two_mark_questions"]),
-                    "five_mark_questions": int(distribution["five_mark_questions"]),
-                    "ten_mark_questions": int(distribution["ten_mark_questions"]),
-                    "fifteen_mark_questions": int(distribution["fifteen_mark_questions"]),
+                    "one_mark_questions": int(distribution.get("one_mark_questions", 0)),
+                    "two_mark_questions": int(distribution.get("two_mark_questions", 0)),
+                    "five_mark_questions": int(distribution.get("five_mark_questions", 0)),
+                    "ten_mark_questions": int(distribution.get("ten_mark_questions", 0)),
+                    "fifteen_mark_questions": int(distribution.get("fifteen_mark_questions", 0)),
                 }
             ]
 
         batch_specs: list[dict[str, int]] = []
         for _, field in MARK_BANDS:
-            count = int(distribution[field])
+            count = int(distribution.get(field, 0))
             if count > 0:
                 batch_specs.append(
                     {
+                        "one_mark_questions": count if field == "one_mark_questions" else 0,
                         "two_mark_questions": count if field == "two_mark_questions" else 0,
                         "five_mark_questions": count if field == "five_mark_questions" else 0,
                         "ten_mark_questions": count if field == "ten_mark_questions" else 0,
@@ -321,13 +323,15 @@ class QuestionGeneratorAgent:
         for batch_index, batch_counts in enumerate(batch_specs, start=1):
             batch_total_questions = sum(batch_counts.values())
             batch_total_marks = (
-                batch_counts["two_mark_questions"] * 2
+                batch_counts["one_mark_questions"] * 1
+                + batch_counts["two_mark_questions"] * 2
                 + batch_counts["five_mark_questions"] * 5
                 + batch_counts["ten_mark_questions"] * 10
                 + batch_counts["fifteen_mark_questions"] * 15
             )
             logger.info(
                 f"{AGENT_NAME}: Starting batch {batch_index}/{len(batch_specs)} - "
+                f"1M={batch_counts['one_mark_questions']}, "
                 f"2M={batch_counts['two_mark_questions']}, "
                 f"5M={batch_counts['five_mark_questions']}, "
                 f"10M={batch_counts['ten_mark_questions']}, "
@@ -348,6 +352,7 @@ class QuestionGeneratorAgent:
                 content_context=content_context,
                 total_marks=batch_total_marks,
                 total_questions=batch_total_questions,
+                one_mark_count=batch_counts["one_mark_questions"],
                 two_mark_count=batch_counts["two_mark_questions"],
                 five_mark_count=batch_counts["five_mark_questions"],
                 ten_mark_count=batch_counts["ten_mark_questions"],
@@ -407,6 +412,7 @@ class QuestionGeneratorAgent:
                     issues=retry_errors,
                     total_marks=batch_total_marks,
                     total_questions=batch_total_questions,
+                    one_mark_count=batch_counts["one_mark_questions"],
                     two_mark_count=batch_counts["two_mark_questions"],
                     five_mark_count=batch_counts["five_mark_questions"],
                     ten_mark_count=batch_counts["ten_mark_questions"],
@@ -452,6 +458,7 @@ class QuestionGeneratorAgent:
                 # Reconcile questions to match the target blueprint count and marks
                 validation_distribution = {
                     "total_marks": batch_total_marks,
+                    "one_mark_questions": batch_counts["one_mark_questions"],
                     "two_mark_questions": batch_counts["two_mark_questions"],
                     "five_mark_questions": batch_counts["five_mark_questions"],
                     "ten_mark_questions": batch_counts["ten_mark_questions"],
@@ -541,6 +548,8 @@ class QuestionGeneratorAgent:
             difficulty = item.get("difficulty") or "medium"
             question_type = item.get("question_type") or ("short" if marks and int(marks) <= 5 else "long")
             image_path = item.get("image_path") or item.get("figure_path")
+            options = item.get("options")
+            correct_answer = item.get("correct_answer")
 
             if not isinstance(q_id, str) or not q_id.strip():
                 q_id = f"Q{idx+1:03d}"
@@ -612,6 +621,8 @@ class QuestionGeneratorAgent:
                     "difficulty": difficulty,
                     "question_type": question_type,
                     "image_path": normalized_image_path,
+                    "options": options if isinstance(options, list) and len(options) == 4 else None,
+                    "correct_answer": str(correct_answer).strip() if correct_answer else None,
                 }
             )
 

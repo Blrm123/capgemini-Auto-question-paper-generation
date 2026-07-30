@@ -445,6 +445,7 @@ async def generate_question_paper(
 
     # --- Question distribution (Form fields) ---
     total_marks: Annotated[int, Form(description="Total marks for the paper")] = 100,
+    one_mark_questions: Annotated[int, Form(description="Number of 1-mark MCQ questions")] = 0,
     two_mark_questions: Annotated[int, Form(description="Number of 2-mark questions")] = 5,
     five_mark_questions: Annotated[int, Form(description="Number of 5-mark questions")] = 4,
     ten_mark_questions: Annotated[int, Form(description="Number of 10-mark questions")] = 3,
@@ -508,6 +509,7 @@ async def generate_question_paper(
     # ------------------------------------------------------------------
     distribution: QuestionDistribution = QuestionDistribution(
         total_marks=total_marks,
+        one_mark_questions=one_mark_questions,
         two_mark_questions=two_mark_questions,
         five_mark_questions=five_mark_questions,
         ten_mark_questions=ten_mark_questions,

@@ -27,7 +27,7 @@ logger = setup_logger(__name__)
 AGENT_NAME = "ValidationAgent"
 
 # Valid value sets for field-level validation
-_VALID_MARKS = {2, 5, 10, 15}
+_VALID_MARKS = {1, 2, 5, 10, 15}
 _VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 _VALID_BLOOM_LEVELS = {
     "Remember", "Understand", "Apply", "Analyze", "Evaluate", "Create"
@@ -35,9 +35,9 @@ _VALID_BLOOM_LEVELS = {
 _BLOOM_NORMALISE: dict[str, str] = {
     level.lower(): level for level in _VALID_BLOOM_LEVELS
 }
-_VALID_QUESTION_TYPES = {"short", "brief", "long", "essay"}
+_VALID_QUESTION_TYPES = {"mcq", "short", "brief", "long", "essay"}
 _MARKS_TO_TYPE: dict[int, str] = {
-    2: "short", 5: "brief", 10: "long", 15: "essay"
+    1: "mcq", 2: "short", 5: "brief", 10: "long", 15: "essay"
 }
 
 
@@ -144,6 +144,7 @@ class ValidationAgent:
             }
 
         total_marks: int = distribution["total_marks"]
+        one_mark_count: int = distribution.get("one_mark_questions", 0)
         two_mark_count: int = distribution["two_mark_questions"]
         five_mark_count: int = distribution["five_mark_questions"]
         ten_mark_count: int = distribution["ten_mark_questions"]
@@ -184,6 +185,7 @@ class ValidationAgent:
                 syllabus_topics=syllabus_topics,
                 content_context=summarized_context,
                 total_marks=total_marks,
+                one_mark_count=one_mark_count,
                 two_mark_count=two_mark_count,
                 five_mark_count=five_mark_count,
                 ten_mark_count=ten_mark_count,
@@ -414,6 +416,15 @@ class ValidationAgent:
                     )
                     image_path = None
 
+            # --- options & correct_answer: fall back to bloom_src ---
+            options = item.get("options")
+            if not options:
+                options = bloom_src.get("options")
+                
+            correct_answer = item.get("correct_answer")
+            if not correct_answer:
+                correct_answer = bloom_src.get("correct_answer")
+
             validated_questions.append(
                 ValidatedQuestion(
                     id=q_id,
@@ -425,6 +436,8 @@ class ValidationAgent:
                     bloom_level=normalised_level,
                     question_type=question_type,
                     image_path=image_path,
+                    options=options if isinstance(options, list) and len(options) == 4 else None,
+                    correct_answer=str(correct_answer).strip() if correct_answer else None,
                 )
             )
 

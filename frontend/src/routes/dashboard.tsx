@@ -60,6 +60,7 @@ interface FormState {
   duration: string;
   exam_date: string;
   total_marks: number;
+  one_mark_questions: number;
   two_mark_questions: number;
   five_mark_questions: number;
   ten_mark_questions: number;
@@ -78,6 +79,7 @@ const INITIAL: FormState = {
   duration: "3 Hours",
   exam_date: "",
   total_marks: 100,
+  one_mark_questions: 0,
   two_mark_questions: 5,
   five_mark_questions: 6,
   ten_mark_questions: 3,
@@ -170,6 +172,7 @@ function Dashboard() {
     setForm((f) => ({ ...f, [k]: v }));
 
   const computedMarks =
+    1 * form.one_mark_questions +
     2 * form.two_mark_questions +
     5 * form.five_mark_questions +
     10 * form.ten_mark_questions +
@@ -218,6 +221,7 @@ function Dashboard() {
 
       const payload: Record<string, string> = {
         total_marks: String(form.total_marks),
+        one_mark_questions: String(form.one_mark_questions),
         two_mark_questions: String(form.two_mark_questions),
         five_mark_questions: String(form.five_mark_questions),
         ten_mark_questions: String(form.ten_mark_questions),
@@ -1875,6 +1879,13 @@ function QuestionsCard({
           onChange={(n) => update("total_marks", n)}
         />
         <NumField
+          label="1 Mark Questions (MCQs)"
+          value={form.one_mark_questions}
+          min={0}
+          max={40}
+          onChange={(n) => update("one_mark_questions", n)}
+        />
+        <NumField
           label="2 Mark Questions"
           value={form.two_mark_questions}
           min={0}
@@ -2125,6 +2136,7 @@ function PreviewStudio({
   const [activeTab, setActiveTab] = useState<"questions" | "answers">("questions");
 
   const sections = [
+    { marks: 1, label: "Section 1 — Multiple Choice Questions (1 Mark each)" },
     { marks: 2, label: "Section A — Short Answer Questions (2 Marks each)" },
     { marks: 5, label: "Section B — Brief Answer Questions (5 Marks each)" },
     { marks: 10, label: "Section C — Long Answer Questions (10 Marks each)" },
@@ -2212,6 +2224,30 @@ function PreviewStudio({
                             className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm leading-relaxed text-foreground shadow-sm focus:border-primary/30 focus:outline-none focus:ring-1 focus:ring-primary/20 resize-y"
                             placeholder="Enter question text..."
                           />
+                          {q.options && q.options.length === 4 && (
+                            <div className="grid grid-cols-2 gap-2 mt-2 px-1">
+                              {q.options.map((opt, oIdx) => (
+                                <div key={oIdx} className="text-sm text-slate-700 bg-slate-100/50 p-2 rounded border border-slate-100">
+                                  {opt}
+                                </div>
+                              ))}
+                              {q.correct_answer && (
+                                <div className="col-span-2 text-xs font-semibold text-emerald-700 mt-1">
+                                  ✓ Correct Answer: {q.correct_answer}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {q.image_path && (
+                            <div className="mt-2 p-2 bg-indigo-50/50 border border-indigo-100 rounded flex items-start gap-2">
+                              <svg className="w-4 h-4 text-indigo-500 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              <div className="text-xs text-indigo-700 font-medium">
+                                Figure attached: <span className="font-normal opacity-80">{q.image_path}</span>
+                              </div>
+                            </div>
+                          )}
                           <div className="flex flex-wrap gap-2 text-[10px]">
                             <span className="inline-flex items-center rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600 border border-slate-200">
                               Unit: {q.unit}

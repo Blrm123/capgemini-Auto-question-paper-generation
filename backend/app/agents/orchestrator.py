@@ -172,6 +172,7 @@ class Orchestrator:
         logger.info(
             f"Orchestrator: Initial state built from {rag_chunk_count} RAG chunk(s). "
             f"Distribution — total_marks={distribution['total_marks']}, "
+            f"1M×{distribution.get('one_mark_questions', 0)}, "
             f"2M×{distribution['two_mark_questions']}, "
             f"5M×{distribution['five_mark_questions']}, "
             f"10M×{distribution['ten_mark_questions']}, "
@@ -407,6 +408,7 @@ class Orchestrator:
 
         required_int_fields = [
             "total_marks",
+            "one_mark_questions",
             "two_mark_questions",
             "five_mark_questions",
             "ten_mark_questions",
@@ -436,18 +438,19 @@ class Orchestrator:
                     f"got: {total_pct}"
                 )
 
+        one_m = distribution.get("one_mark_questions", 0)
         two_m = distribution.get("two_mark_questions", 0)
         five_m = distribution.get("five_mark_questions", 0)
         ten_m = distribution.get("ten_mark_questions", 0)
         fifteen_m = distribution.get("fifteen_mark_questions", 0)
         total_marks = distribution.get("total_marks", 0)
 
-        if all(isinstance(v, int) for v in [two_m, five_m, ten_m, fifteen_m, total_marks]):
-            computed = (two_m * 2) + (five_m * 5) + (ten_m * 10) + (fifteen_m * 15)
+        if all(isinstance(v, int) for v in [one_m, two_m, five_m, ten_m, fifteen_m, total_marks]):
+            computed = (one_m * 1) + (two_m * 2) + (five_m * 5) + (ten_m * 10) + (fifteen_m * 15)
             if computed != total_marks:
                 errors.append(
                     f"total_marks ({total_marks}) does not match the sum of question marks "
-                    f"({two_m}×2 + {five_m}×5 + {ten_m}×10 + {fifteen_m}×15 = {computed})."
+                    f"({one_m}×1 + {two_m}×2 + {five_m}×5 + {ten_m}×10 + {fifteen_m}×15 = {computed})."
                 )
 
         return errors

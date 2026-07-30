@@ -19,6 +19,8 @@ export interface ValidatedQuestion {
   bloom_level: string;
   question_type: string;
   image_path?: string;
+  options?: string[];
+  correct_answer?: string;
 }
 
 export interface CatalogNode {
