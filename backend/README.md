@@ -1,20 +1,17 @@
 # Agentic AI Question Paper Generator
 
-An AI-powered question paper generator that automatically creates university/college-level question papers from uploaded syllabus documents using a **Multi-Agent AI architecture** built with LangGraph and Groq LLM.
+An AI-powered question paper generator that automatically creates university/college-level question papers from uploaded syllabus documents, Google Drive files, and Google Classroom materials. It uses a **Multi-Agent AI architecture** built with LangGraph and powered by Gemini LLMs (with Groq fallback).
 
 ---
 
 ## Features
 
-- Upload a syllabus PDF or TXT and get a full question paper in seconds
-- Multi-Agent pipeline: Syllabus → Questions → Bloom's Taxonomy → Validation → Answer Key
-- Professionally formatted PDF output (question paper + answer key)
-- Configurable marks distribution (2M / 5M / 10M / 15M questions)
-- Difficulty balancing (Easy / Medium / Hard percentages)
-- Bloom's Taxonomy classification for every question
-- Automatic validation and correction of question quality
-- FastAPI REST API with file upload and PDF download
-- Rotating file logger with color console output
+- **Multi-Source Ingestion:** Upload local files, or pull directly from Google Drive and Google Classroom.
+- **RAG Architecture (Hybrid):** Uses local in-memory FAISS for fast ad-hoc question paper generation, and cloud-based Pinecone for permanent Knowledge Base storage to avoid vector pollution.
+- **Multi-Agent Pipeline:** Syllabus Extraction → RAG Context Retrieval → Question Generation → Bloom's Taxonomy Tagging → Quality Validation → Answer Key Generation.
+- **Configurable Output:** Set marks distribution (2M / 5M / 10M / 15M questions) and difficulty balancing (Easy / Medium / Hard).
+- **Professionally Formatted PDFs:** Automatically generates a formatted Question Paper and a separate Answer Key PDF.
+- **Frontend Dashboard:** A React-based UI for managing knowledge, selecting sources, and generating papers.
 
 ---
 
@@ -22,60 +19,99 @@ An AI-powered question paper generator that automatically creates university/col
 
 | Layer | Technology |
 |---|---|
-| Backend | Python 3.11+ |
-| AI Orchestration | LangGraph |
-| LLM Framework | LangChain |
-| LLM Provider | Groq API |
-| Default Model | `llama-3.3-70b-versatile` |
-| PDF Generation | ReportLab |
-| PDF Parsing | pypdf |
-| API Framework | FastAPI + Uvicorn |
-| Testing | pytest |
+| **Backend** | Python 3.11+, FastAPI, Uvicorn |
+| **Frontend** | React, TypeScript, TailwindCSS, Vite |
+| **AI Orchestration** | LangGraph |
+| **Vector Database (RAG)** | Pinecone (Knowledge Base) & FAISS (Local Temporary Memory) |
+| **Embeddings** | HuggingFace (`all-MiniLM-L6-v2`) |
+| **LLM Provider** | Google Gemini API (Primary) / Groq API (Fallback) |
+| **Default Models** | `gemini-2.5-flash-lite` (Gemini), `llama-3.3-70b-versatile` (Groq) |
+| **Database** | SQLite (`catalog.db`) for Frontend Knowledge Management |
+| **PDF Generation** | ReportLab |
+| **PDF Parsing** | pypdf |
+
+---
+
+## Architecture Flow
+
+The question paper generation is orchestrated by a stateful LangGraph workflow that executes in the following sequence:
+
+1. **Ingestion (`rag_service.py`):**
+   - Files (PDF, TXT, DOCX) are chunked and embedded.
+   - For ad-hoc generation, chunks are stored in a temporary, blazing-fast local FAISS index.
+   - For Knowledge Base uploads, chunks are securely stored in Pinecone and registered in `catalog.db`.
+
+2. **Syllabus Agent (`syllabus_agent.py`):**
+   - Reads the documents and extracts structured syllabus units and topics.
+
+3. **Image Descriptor Agent (`image_descriptor_agent.py`):**
+   - Processes any images found in the documents using Gemini's Vision capabilities.
+
+4. **Topic Retrieval Agent (`topic_retrieval_agent.py`):**
+   - Queries the vector database to retrieve specific contextual chunks for each identified syllabus topic.
+
+5. **Question Generator Agent (`question_generator_agent.py`):**
+   - Uses the RAG context and blueprint distribution (marks/difficulty) to generate exam questions.
+
+6. **Bloom Agent (`bloom_agent.py`):**
+   - Analyzes generated questions and assigns Bloom's Taxonomy levels (Remember, Understand, Apply, etc.) along with a justification.
+
+7. **Validation Agent (`validation_agent.py`):**
+   - Reviews questions for structural quality, checking for formatting errors, missing data, and blueprint mismatch.
+
+8. **Answer Key Agent (`answerkey_agent.py`):**
+   - Generates detailed model answers and step-by-step marking schemes for all validated questions.
+
+9. **PDF Generation (`pdf_generator.py`):**
+   - Compiles the final state into two polished PDFs: the Question Paper and the Answer Key.
 
 ---
 
 ## Project Structure
 
-```
+```text
 question-paper-generator/
 │
-├── app/
-│   ├── main.py                        # FastAPI application entry point
-│   ├── config.py                      # Centralised settings (LLM, paths, PDF, API)
-│   │
-│   ├── agents/
-│   │   ├── orchestrator.py            # Top-level coordinator
-│   │   ├── syllabus_agent.py          # Extracts units & topics from syllabus
-│   │   ├── question_generator_agent.py# Generates exam questions
-│   │   ├── bloom_agent.py             # Classifies questions by Bloom's Taxonomy
-│   │   ├── validation_agent.py        # Validates and corrects question quality
-│   │   └── answerkey_agent.py         # Generates model answers & marking schemes
-│   │
-│   ├── workflows/
-│   │   └── langgraph_workflow.py      # LangGraph StateGraph definition
-│   │
-│   ├── prompts/
-│   │   ├── syllabus_prompt.py         # Syllabus extraction prompt
-│   │   ├── question_prompt.py         # Question generation prompt
-│   │   ├── bloom_prompt.py            # Bloom classification prompt
-│   │   ├── validation_prompt.py       # Validation prompt
-│   │   └── answerkey_prompt.py        # Answer key prompt
-│   │
-│   ├── services/
-│   │   ├── llm_service.py             # Groq LLM wrapper with retries
-│   │   ├── pdf_generator.py           # ReportLab PDF generation service
-│   │   └── logger.py                  # Rotating file + color console logger
-│   │
-│   └── models/
-│       └── state.py                   # LangGraph TypedDict state definition
+├── frontend/                          # React + Vite web dashboard
 │
-├── uploaded_documents/                # Store uploaded syllabus files
-├── generated_papers/                  # Output: question paper & answer key PDFs
-├── logs/                              # application.log (auto-created)
-├── tests/                             # Test suites
-├── .env                               # Environment variables (see below)
-├── requirements.txt                   # Python dependencies
-└── README.md
+├── backend/
+│   ├── app/
+│   │   ├── main.py                    # FastAPI application & API endpoints
+│   │   ├── config.py                  # Centralised settings
+│   │   │
+│   │   ├── agents/                    # LangGraph AI Agents
+│   │   │   ├── orchestrator.py        # Top-level workflow coordinator
+│   │   │   ├── syllabus_agent.py      
+│   │   │   ├── image_descriptor_agent.py
+│   │   │   ├── topic_retrieval_agent.py
+│   │   │   ├── question_generator_agent.py
+│   │   │   ├── bloom_agent.py         
+│   │   │   ├── validation_agent.py    
+│   │   │   └── answerkey_agent.py     
+│   │   │
+│   │   ├── workflows/
+│   │   │   └── langgraph_workflow.py  # LangGraph StateGraph definition
+│   │   │
+│   │   ├── services/
+│   │   │   ├── llm_service.py         # LLM wrapper (Gemini + Groq)
+│   │   │   ├── rag_service.py         # Ingestion orchestration
+│   │   │   ├── catalog_service.py     # SQLite knowledge catalog manager
+│   │   │   ├── pdf_generator.py       
+│   │   │   └── logger.py              
+│   │   │
+│   │   ├── models/
+│   │   │   └── state.py               # LangGraph TypedDict state
+│   │   │
+│   │   └── rag/                       # Local ingestion pipelines
+│   │       ├── src/
+│   │       │   ├── ingestion/embedder.py
+│   │       │   └── pipeline/rag_pipeline.py
+│   │       └── vectorstore/           # FAISS index storage location
+│   │
+│   ├── uploaded_documents/            # Temp storage for ad-hoc uploads
+│   ├── generated_papers/              # Output PDFs
+│   ├── catalog.db                     # SQLite database for knowledge base
+│   └── requirements.txt               
 ```
 
 ---
