@@ -13,16 +13,18 @@ _HF_LIBS_AVAILABLE = False
 try:
     from langchain_community.vectorstores import FAISS
     from langchain_huggingface import HuggingFaceEmbeddings
-
+    from langchain_pinecone import PineconeVectorStore
     _HF_LIBS_AVAILABLE = True
-except Exception:
+except Exception as e:
+    import traceback
+    logger.error(f"Failed to import HF/Pinecone libs: {e}\n{traceback.format_exc()}")
     FAISS = None  # type: ignore
     HuggingFaceEmbeddings = None  # type: ignore
+    PineconeVectorStore = None # type: ignore
 
 
 class DummyVectorStore:
     """Token-overlap fallback when HuggingFace embeddings are unavailable."""
-
     def __init__(self, docs: Optional[List[Document]] = None):
         self.docs = docs or []
         self._token_sets = [set(d.page_content.lower().split()) for d in self.docs]
@@ -73,88 +75,55 @@ def _get_embedder():
         encode_kwargs={"normalize_embeddings": True},
     )
 
+def _get_pinecone_index_name():
+    return os.environ.get("PINECONE_INDEX_NAME", "qp-generator")
 
-def _build_dummy_index(chunks: List[Document]) -> DummyVectorStore:
-    logger.warning(
-        "Using token-overlap fallback index (install sentence-transformers for full embeddings)."
-    )
-    vs = DummyVectorStore.from_documents(chunks)
-    os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
-    vs.save_local(FAISS_INDEX_PATH)
-    logger.info(f"Dummy index saved to {FAISS_INDEX_PATH} ({len(chunks)} chunks)")
-    return vs
-
-
-def build_faiss_index(chunks: List[Document]):
+def build_vector_index(chunks: List[Document], force_local: bool = False):
+    """Builds Pinecone index if configured, otherwise falls back to FAISS."""
     logger.info("Building vector index...")
-    if _HF_LIBS_AVAILABLE and FAISS is not None:
-        try:
-            embedder = _get_embedder()
-            vectorstore = FAISS.from_documents(chunks, embedder)
-            os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
-            vectorstore.save_local(FAISS_INDEX_PATH)
-            logger.info(f"FAISS index saved to {FAISS_INDEX_PATH}")
-            return vectorstore
-        except Exception as exc:
-            logger.warning(f"FAISS embedding build failed: {exc}")
-    return _build_dummy_index(chunks)
-
-
-def load_faiss_index():
-    if not os.path.exists(FAISS_INDEX_PATH):
-        raise FileNotFoundError(
-            f"No index directory found at {FAISS_INDEX_PATH}. Run ingestion first."
-        )
-
-    dummy_docs_path = os.path.join(FAISS_INDEX_PATH, _DUMMY_DOCS_FILE)
-    if os.path.exists(dummy_docs_path):
-        vs = DummyVectorStore.load_local(FAISS_INDEX_PATH)
-        logger.info(f"Dummy index loaded from {FAISS_INDEX_PATH} ({len(vs.docs)} chunks)")
+    
+    if not _HF_LIBS_AVAILABLE:
+        logger.warning("Using token-overlap fallback index (install sentence-transformers for full embeddings).")
+        vs = DummyVectorStore.from_documents(chunks)
+        os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
+        vs.save_local(FAISS_INDEX_PATH)
         return vs
-
-    if _HF_LIBS_AVAILABLE and FAISS is not None:
+        
+    embedder = _get_embedder()
+    
+    if not force_local and os.environ.get("PINECONE_API_KEY"):
+        logger.info("Uploading to Pinecone...")
         try:
-            embedder = _get_embedder()
-            vectorstore = FAISS.load_local(
-                FAISS_INDEX_PATH, embedder, allow_dangerous_deserialization=True
+            vectorstore = PineconeVectorStore.from_documents(
+                chunks, embedder, index_name=_get_pinecone_index_name()
             )
-            logger.info(f"FAISS index loaded from {FAISS_INDEX_PATH}")
+            logger.info("Pinecone upload complete.")
             return vectorstore
         except Exception as exc:
-            logger.warning(f"FAISS index load failed: {exc}")
+            logger.warning(f"Pinecone embedding failed: {exc}, falling back to FAISS.")
+            
+    # Fallback FAISS
+    try:
+        vectorstore = FAISS.from_documents(chunks, embedder)
+        os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
+        vectorstore.save_local(FAISS_INDEX_PATH)
+        logger.info(f"FAISS index saved to {FAISS_INDEX_PATH}")
+        return vectorstore
+    except Exception as exc:
+        logger.warning(f"FAISS embedding build failed: {exc}")
+        return DummyVectorStore.from_documents(chunks)
 
-    raise FileNotFoundError(f"Index not found or failed to load from {FAISS_INDEX_PATH}")
-
-
-def update_faiss_index(new_chunks: List[Document]):
-    os.makedirs(FAISS_INDEX_PATH, exist_ok=True)
-    dummy_docs_path = os.path.join(FAISS_INDEX_PATH, _DUMMY_DOCS_FILE)
-
-    if os.path.exists(dummy_docs_path):
-        try:
-            vs = DummyVectorStore.load_local(FAISS_INDEX_PATH)
-            vs.add_documents(new_chunks)
-            vs.save_local(FAISS_INDEX_PATH)
-            return vs
-        except Exception:
-            return _build_dummy_index(new_chunks)
-
+def load_vector_index():
+    """Load Pinecone index if configured, otherwise FAISS."""
+    if os.environ.get("PINECONE_API_KEY") and _HF_LIBS_AVAILABLE:
+        logger.info("Connecting to Pinecone index...")
+        return PineconeVectorStore(index_name=_get_pinecone_index_name(), embedding=_get_embedder())
+        
     if _HF_LIBS_AVAILABLE and FAISS is not None:
         try:
-            embedder = _get_embedder()
-            if os.path.exists(FAISS_INDEX_PATH):
-                try:
-                    vectorstore = FAISS.load_local(
-                        FAISS_INDEX_PATH, embedder, allow_dangerous_deserialization=True
-                    )
-                    vectorstore.add_documents(new_chunks)
-                except Exception:
-                    vectorstore = FAISS.from_documents(new_chunks, embedder)
-            else:
-                vectorstore = FAISS.from_documents(new_chunks, embedder)
-            vectorstore.save_local(FAISS_INDEX_PATH)
-            return vectorstore
-        except Exception as exc:
-            logger.warning(f"FAISS index update failed: {exc}")
-
-    return _build_dummy_index(new_chunks)
+            return FAISS.load_local(
+                FAISS_INDEX_PATH, _get_embedder(), allow_dangerous_deserialization=True
+            )
+        except Exception:
+            pass
+    return DummyVectorStore.load_local(FAISS_INDEX_PATH)

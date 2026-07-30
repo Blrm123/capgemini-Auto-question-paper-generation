@@ -1,15 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import {
-  downloadFile,
-  listPapers,
-} from "@/lib/api";
+import { downloadFile, listPapers } from "@/lib/api";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
       { title: "History - Question Paper Generator" },
-      { name: "description", content: "View and download previously generated university examination papers." },
+      {
+        name: "description",
+        content: "View and download previously generated university examination papers.",
+      },
     ],
   }),
   component: HistoryPage,
@@ -26,8 +26,18 @@ function formatTimestamp(ts: string): string {
   const second = ts.slice(13, 15);
 
   const months = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const monthName = months[monthIdx] || ts.slice(4, 6);
 
@@ -78,15 +88,26 @@ function HistoryPage() {
               Previously Generated Papers
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-              Browse, filter, and download question papers and answer keys generated in past sessions.
+              Browse, filter, and download question papers and answer keys generated in past
+              sessions.
             </p>
           </div>
           <Link
             to="/dashboard"
             className="self-start sm:self-center inline-flex items-center gap-2 rounded-lg bg-primary px-4.5 py-2.5 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/95"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 5v14"/><path d="M5 12h14"/>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
             </svg>
             Create New Paper
           </Link>
@@ -96,8 +117,18 @@ function HistoryPage() {
         <div className="mb-6 flex items-center gap-4 rounded-xl border border-white/80 bg-white/85 p-4 shadow-[0_1px_2px_oklch(0.32_0.07_257/0.02)] backdrop-blur-sm">
           <div className="relative flex-1">
             <span className="absolute inset-y-0 left-3.5 flex items-center text-muted-foreground">
-              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
               </svg>
             </span>
             <input
@@ -121,7 +152,9 @@ function HistoryPage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-20">
             <span className="h-8 w-8 animate-spin rounded-full border-3 border-primary/30 border-t-primary" />
-            <p className="mt-4 text-sm text-muted-foreground font-medium">Loading generation archive...</p>
+            <p className="mt-4 text-sm text-muted-foreground font-medium">
+              Loading generation archive...
+            </p>
           </div>
         ) : error ? (
           <div className="rounded-xl border border-red-200 bg-red-50/90 p-6 text-center">
@@ -137,13 +170,23 @@ function HistoryPage() {
         ) : filteredPapers.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/80 bg-[oklch(0.975_0.012_245/0.4)] py-16 text-center">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-                <path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/>
+              <svg
+                viewBox="0 0 24 24"
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                aria-hidden
+              >
+                <path d="M6 4h8l4 4v12H6z" />
+                <path d="M14 4v4h4" />
               </svg>
             </div>
             <h3 className="text-base font-semibold text-foreground">No papers found</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              {searchQuery ? "No papers match your search term." : "You haven't generated any papers yet."}
+              {searchQuery
+                ? "No papers match your search term."
+                : "You haven't generated any papers yet."}
             </p>
           </div>
         ) : (
@@ -151,7 +194,9 @@ function HistoryPage() {
             {filteredPapers.map((filename) => {
               const isAnswer = /answer/i.test(filename);
               // Extract timestamp from pattern e.g. question_paper_20260611_190746.pdf
-              const rawTimestamp = filename.replace(/^(question_paper_|answer_key_)/, "").replace(".pdf", "");
+              const rawTimestamp = filename
+                .replace(/^(question_paper_|answer_key_)/, "")
+                .replace(".pdf", "");
               const formattedDate = formatTimestamp(rawTimestamp);
 
               return (
@@ -161,27 +206,53 @@ function HistoryPage() {
                 >
                   <div>
                     <div className="mb-4 flex items-start justify-between gap-3">
-                      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
-                        isAnswer ? "bg-slate-100 text-slate-700 border border-slate-200" : "bg-primary/10 text-primary border border-primary/5"
-                      }`}>
-                        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                      <span
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${
+                          isAnswer
+                            ? "bg-slate-100 text-slate-700 border border-slate-200"
+                            : "bg-primary/10 text-primary border border-primary/5"
+                        }`}
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-5 w-5"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.75"
+                          aria-hidden
+                        >
                           {isAnswer ? (
-                            <><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/></>
+                            <>
+                              <path d="M12 2v4" />
+                              <path d="M12 18v4" />
+                              <path d="m4.93 4.93 2.83 2.83" />
+                              <path d="m16.24 16.24 2.83 2.83" />
+                              <path d="M2 12h4" />
+                              <path d="M18 12h4" />
+                            </>
                           ) : (
-                            <><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/></>
+                            <>
+                              <path d="M6 4h8l4 4v12H6z" />
+                              <path d="M14 4v4h4" />
+                            </>
                           )}
                         </svg>
                       </span>
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide border ${
-                        isAnswer
-                          ? "bg-slate-50 text-slate-600 border-slate-200"
-                          : "bg-primary/[0.06] text-primary border-primary/10"
-                      }`}>
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide border ${
+                          isAnswer
+                            ? "bg-slate-50 text-slate-600 border-slate-200"
+                            : "bg-primary/[0.06] text-primary border-primary/10"
+                        }`}
+                      >
                         {isAnswer ? "Answer Key" : "Question Paper"}
                       </span>
                     </div>
 
-                    <h3 className="text-[14px] font-semibold text-foreground tracking-tight line-clamp-1 group-hover:text-primary transition-colors" title={filename}>
+                    <h3
+                      className="text-[14px] font-semibold text-foreground tracking-tight line-clamp-1 group-hover:text-primary transition-colors"
+                      title={filename}
+                    >
                       {filename.replace(".pdf", "")}
                     </h3>
                     <p className="mt-1.5 text-xs text-muted-foreground font-medium">
@@ -235,8 +306,19 @@ function DownloadButton({ filename }: { filename: string }) {
           </>
         ) : (
           <>
-            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             Download PDF
           </>
@@ -254,7 +336,21 @@ function Header() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3.5">
           <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-[oklch(0.42_0.09_255)] text-primary-foreground shadow-[0_2px_8px_-2px_oklch(0.32_0.07_257/0.4)]">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M8 13h8"/><path d="M8 17h6"/></svg>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M6 4h8l4 4v12H6z" />
+              <path d="M14 4v4h4" />
+              <path d="M8 13h8" />
+              <path d="M8 17h6" />
+            </svg>
           </div>
           <div>
             <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">

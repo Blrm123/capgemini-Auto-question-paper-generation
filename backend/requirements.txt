@@ -31,6 +31,8 @@ sentence-transformers>=3.0.0
 huggingface_hub>=0.23.0
 rank-bm25
 torch
+pinecone
+langchain-pinecone
 
 # PDF generation & templating
 jinja2
@@ -46,7 +48,6 @@ pyyaml
 
 # Legacy Streamlit UI
 streamlit
-
 
 google-auth
 google-auth-oauthlib

@@ -70,13 +70,20 @@ class RAGService:
         logger.info(f"RAGService: Ingested {chunk_count} chunk(s) from {len(file_paths)} file(s).")
         return chunk_count
 
+    def ingest_files_with_metadata(self, file_paths: list[str], subject: str, chapter: str) -> int:
+        """Ingest files and append them to the existing persistent vector store with metadata."""
+        logger.info(f"RAGService: Ingesting {len(file_paths)} file(s) with Subject: {subject}, Chapter: {chapter}")
+        metadata = {"subject": subject, "chapter": chapter}
+        chunk_count = self._pipeline.ingest_files_with_metadata(file_paths, metadata)
+        return chunk_count
+
     def ingest_file(self, file_path: str) -> int:
         """Ingest a single file (convenience wrapper)."""
         return self.ingest_files([file_path])
 
-    def retrieve(self, query: str) -> dict[str, Any]:
-        """Retrieve reranked chunks for a query."""
-        return self._pipeline.retrieve(query)
+    def retrieve(self, query: str, filters: dict[str, Any] | None = None) -> dict[str, Any]:
+        """Retrieve reranked chunks for a query with optional filters."""
+        return self._pipeline.retrieve(query, filters=filters)
 
     def retrieve_for_syllabus_topics(
         self,
@@ -84,6 +91,7 @@ class RAGService:
         *,
         top_k_per_topic: int = TOPIC_RETRIEVAL_TOP_K,
         max_merged_chunks: int = MAX_TOPIC_CONTEXT_CHUNKS,
+        filters: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Retrieve and merge reranked evidence for every extracted topic.
 
@@ -112,8 +120,8 @@ class RAGService:
         seen_chunks: set[tuple[str, str]] = set()
         retrievals: list[dict[str, Any]] = []
         for topic, query in queries:
-            result = self.retrieve(query)
-            candidates = (result.get("chunks") or [])[:top_k_per_topic]
+            result = self.retrieve(query, filters=filters)
+            candidates = (result.get("top_chunks", result.get("chunks")) or [])[:top_k_per_topic]
             added = 0
             for chunk in candidates:
                 source = str(chunk.get("source", ""))
@@ -211,7 +219,7 @@ class RAGService:
         """Preview a single file (convenience wrapper)."""
         return self.preview_files([file_path])
 
-    def prepare_agent_contexts(self, file_count: int = 1) -> dict[str, Any]:
+    def prepare_agent_contexts(self, file_count: int = 1, filters: dict[str, Any] | None = None) -> dict[str, Any]:
         """
         Retrieve and format context strings for downstream agents.
 
@@ -220,10 +228,15 @@ class RAGService:
         """
         all_chunks = self.get_all_chunks()
         if not all_chunks:
-            raise RuntimeError("No chunks available after ingestion.")
+            # If using Pinecone, all_chunks might be empty in memory but exist in the DB.
+            # We won't raise an error here if filters are provided (since we are querying from remote)
+            if not filters:
+                logger.warning("No chunks available locally after ingestion.")
 
-        syllabus_result = self.retrieve(SYLLABUS_RETRIEVAL_QUERY)
-        syllabus_chunks = syllabus_result["chunks"] if syllabus_result["chunks"] else all_chunks[:6]
+        syllabus_result = self.retrieve(SYLLABUS_RETRIEVAL_QUERY, filters=filters)
+        syllabus_chunks = syllabus_result.get("top_chunks", syllabus_result.get("chunks", []))
+        if not syllabus_chunks:
+            syllabus_chunks = all_chunks[:6]
 
         return {
             "rag_chunks": all_chunks,

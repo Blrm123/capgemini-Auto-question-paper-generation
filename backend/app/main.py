@@ -31,6 +31,7 @@ from app.config import settings
 from app.models.state import PaperMetadata, QuestionDistribution
 from app.services.logger import setup_logger
 from app.services.rag_service import RAGService
+from app.services.catalog_service import CatalogService
 from integrations.google_auth import GoogleOAuthStore
 from integrations.google_sources import (
     download_selection,
@@ -319,6 +320,66 @@ async def _save_and_validate_uploads(
     return saved_names, [str(p) for p in saved_paths], total_size_mb, saved_paths
 
 
+class KnowledgeUploadResponse(BaseModel):
+    success: bool
+    message: str
+    file_names: list[str] = Field(default_factory=list)
+    chunk_count: int = 0
+
+
+@app.post(
+    "/knowledge/upload",
+    response_model=KnowledgeUploadResponse,
+    tags=["Knowledge Base"],
+    summary="Upload and embed course materials to the Vector DB"
+)
+async def knowledge_upload(
+    subject: Annotated[str, Form(description="Subject name (e.g. Physics)")],
+    chapter: Annotated[str, Form(description="Chapter or Unit name (e.g. Electromagnetism)")],
+    files: Annotated[list[UploadFile], File(description="Syllabus/course documents to upload")],
+) -> KnowledgeUploadResponse:
+    """Extracts, chunks, embeds, and permanently saves documents to the Cloud Vector DB."""
+    try:
+        file_names, upload_paths, total_size_mb, _paths = await _save_and_validate_uploads(files)
+    except HTTPException:
+        raise
+
+    logger.info(f"Uploading {len(file_names)} file(s) for {subject} - {chapter}")
+
+    try:
+        rag_service = RAGService()
+        chunk_count = rag_service.ingest_files_with_metadata(upload_paths, subject, chapter)
+        
+        catalog = CatalogService()
+        for fname in file_names:
+            catalog.add_document(subject, chapter, fname, chunk_count // len(file_names) if len(file_names) > 0 else chunk_count)
+
+        return KnowledgeUploadResponse(
+            success=True,
+            message=f"Successfully indexed {chunk_count} chunks into the knowledge base.",
+            file_names=file_names,
+            chunk_count=chunk_count
+        )
+    except Exception as exc:
+        logger.error(f"Knowledge upload failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Knowledge upload failed: {exc}")
+
+
+@app.get(
+    "/knowledge/list",
+    tags=["Knowledge Base"],
+    summary="List all available subjects and chapters in the Knowledge Base"
+)
+async def knowledge_list():
+    """Returns the catalog hierarchy of uploaded documents."""
+    try:
+        catalog = CatalogService()
+        tree = catalog.get_catalog_tree()
+        return {"success": True, "catalog": tree}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.post(
     "/rag/preview",
     response_model=RagPreviewResponse,
@@ -379,6 +440,8 @@ async def generate_question_paper(
     google_session_id: Annotated[Optional[str], Form()] = None,
     google_file_ids: Annotated[Optional[str], Form(description="JSON array of selected Drive/Classroom file IDs")] = None,
     google_folder_ids: Annotated[Optional[str], Form(description="JSON array of selected Drive folder IDs")] = None,
+    subject: Annotated[Optional[str], Form(description="Filter by subject in Knowledge Base")] = None,
+    chapter: Annotated[Optional[str], Form(description="Filter by chapter in Knowledge Base")] = None,
 
     # --- Question distribution (Form fields) ---
     total_marks: Annotated[int, Form(description="Total marks for the paper")] = 100,
@@ -433,12 +496,11 @@ async def generate_question_paper(
         file_names.extend(path.name for path in imported)
         total_size_mb += sum(path.stat().st_size for path in imported) / (1024 * 1024)
 
-    if not upload_paths:
-        raise HTTPException(status_code=400, detail="Select at least one manual, Drive, or Classroom document.")
+    if not upload_paths and not (subject and chapter):
+        raise HTTPException(status_code=400, detail="Must provide either files to upload, or subject & chapter to search the Knowledge Base.")
 
     logger.info(
-        f"Received {len(file_names)} file(s) ({total_size_mb:.2f} MB total): "
-        f"{', '.join(file_names)}"
+        f"Received {len(file_names)} file(s) ({total_size_mb:.2f} MB total). Subject: {subject}, Chapter: {chapter}"
     )
 
     # ------------------------------------------------------------------
@@ -475,10 +537,20 @@ async def generate_question_paper(
             detail="Orchestrator is not initialised. Service is starting up.",
         )
 
+    filters = {}
+    if subject:
+        filters["subject"] = subject
+    if chapter:
+        filters["chapter"] = chapter
+    
+    if not filters:
+        filters = None
+
     result: OrchestratorResult = _orchestrator.run(
         uploaded_file_paths=upload_paths,
         distribution=distribution,
         paper_metadata=paper_metadata,
+        filters=filters,
     )
 
     # ------------------------------------------------------------------

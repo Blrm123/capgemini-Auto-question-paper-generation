@@ -152,7 +152,13 @@ function Index() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
           <Link to="/" className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 text-white shadow-md shadow-indigo-500/20">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                className="h-5 w-5"
+              >
                 <path d="M6 3h9l4 4v14H6z" strokeLinejoin="round" />
                 <path d="M9 12h6M9 16h4" strokeLinecap="round" />
               </svg>
@@ -164,20 +170,33 @@ function Index() {
           </Link>
 
           <nav className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white/80 p-1 md:flex">
-            <Link to="/" className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
+            <Link
+              to="/"
+              className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            >
               Home
             </Link>
-            <Link to="/dashboard" className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
+            <Link
+              to="/dashboard"
+              className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            >
               Dashboard
             </Link>
-            <Link to="/history" className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900">
+            <Link
+              to="/history"
+              className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+            >
               History
             </Link>
           </nav>
 
           <div className="flex items-center gap-2">
-            <span className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] font-medium ${online ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${online ? "bg-emerald-500" : "bg-slate-400"}`} />
+            <span
+              className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5 text-[11px] font-medium ${online ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"}`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${online ? "bg-emerald-500" : "bg-slate-400"}`}
+              />
               {online ? "Online" : "Offline"}
             </span>
           </div>
@@ -210,7 +229,8 @@ function Index() {
           <Reveal delay={170}>
             <p className="mx-auto mt-6 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
               Upload your syllabus and reference material. A team of AI agents plans the blueprint,
-              retrieves grounded content, drafts the paper and reviews it — complete with an answer key.
+              retrieves grounded content, drafts the paper and reviews it — complete with an answer
+              key.
             </p>
           </Reveal>
 
@@ -221,7 +241,9 @@ function Index() {
                 className="qpg-shine group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/35"
               >
                 Generate a paper
-                <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+                <span className="transition-transform duration-300 group-hover:translate-x-1">
+                  →
+                </span>
               </Link>
               <Link
                 to="/history"
@@ -295,13 +317,18 @@ function Index() {
         {/* Highlights */}
         <section className="mt-28 grid gap-5 sm:grid-cols-3">
           {[
-            ["RAG-grounded", "Questions trace back to your own uploaded material, not generic web text."],
+            [
+              "RAG-grounded",
+              "Questions trace back to your own uploaded material, not generic web text.",
+            ],
             ["Answer keys", "Every paper ships with a matching key and marking scheme."],
             ["Export ready", "Clean, printable formatting suitable for institutional use."],
           ].map(([title, desc], i) => (
             <Reveal key={title} delay={i * 110}>
               <div className="qpg-card h-full rounded-2xl border border-slate-200/80 bg-white/70 p-6 text-center backdrop-blur transition-all duration-500 hover:-translate-y-1 hover:border-violet-200 hover:bg-white">
-                <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-600">{title}</h3>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-indigo-600">
+                  {title}
+                </h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600">{desc}</p>
               </div>
             </Reveal>

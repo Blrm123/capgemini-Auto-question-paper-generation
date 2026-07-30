@@ -13,6 +13,10 @@ import {
   updateAnswerKey,
   type GenerateResponse,
   type HealthResponse,
+  getKnowledgeList,
+  uploadKnowledge,
+  type KnowledgeListResponse,
+  type CatalogNode,
   type GoogleItem,
   type ValidatedQuestion,
   type AnswerKeyItem,
@@ -87,6 +91,8 @@ function Dashboard() {
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [healthOk, setHealthOk] = useState<boolean>(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [kbSubject, setKbSubject] = useState("");
+  const [kbChapter, setKbChapter] = useState("");
   const [fileError, setFileError] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(INITIAL);
   const [loading, setLoading] = useState(false);
@@ -195,9 +201,11 @@ function Dashboard() {
     setFileError(validateFiles(next));
   };
 
-  const hasDocuments = files.length > 0 || googleSelections.length > 0;
-  const canGenerate =
-    healthOk && hasDocuments && !fileError && marksOk && diffOk && !loading;
+  const hasDocuments =
+    files.length > 0 ||
+    googleSelections.length > 0 ||
+    (kbSubject.trim() !== "" && kbChapter.trim() !== "");
+  const canGenerate = healthOk && hasDocuments && !fileError && marksOk && diffOk && !loading;
 
   const onGenerate = async () => {
     if (!canGenerate) return;
@@ -227,6 +235,8 @@ function Dashboard() {
         google_session_id: googleSessionId || "",
         google_file_ids: JSON.stringify(fileIds),
         google_folder_ids: JSON.stringify(folderIds),
+        subject: kbSubject,
+        chapter: kbChapter,
       };
       const res = await generatePaper(files, payload);
       setResult(res);
@@ -303,8 +313,18 @@ function Dashboard() {
             to="/history"
             className="self-start sm:self-center inline-flex items-center gap-2 rounded-lg border border-border/80 bg-white/90 px-4 py-2.5 text-xs font-semibold text-foreground transition hover:border-primary/30 hover:bg-primary/[0.04]"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 8v4l3 3" /><circle cx="12" cy="12" r="10" />
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M12 8v4l3 3" />
+              <circle cx="12" cy="12" r="10" />
             </svg>
             Browse History
           </Link>
@@ -343,10 +363,21 @@ function Dashboard() {
                     </div>
 
                     <div className="space-y-1.5 text-xs text-muted-foreground">
-                      <p>• Institution: <b>{form.institution_name || "N/A"}</b></p>
-                      <p>• Course: <b>{form.course_name} ({form.course_code})</b></p>
-                      <p>• Type: <b>{form.exam_type}</b></p>
-                      <p>• Marks: <b>{form.total_marks}</b></p>
+                      <p>
+                        • Institution: <b>{form.institution_name || "N/A"}</b>
+                      </p>
+                      <p>
+                        • Course:{" "}
+                        <b>
+                          {form.course_name} ({form.course_code})
+                        </b>
+                      </p>
+                      <p>
+                        • Type: <b>{form.exam_type}</b>
+                      </p>
+                      <p>
+                        • Marks: <b>{form.total_marks}</b>
+                      </p>
                     </div>
 
                     {pdfResult && (
@@ -375,7 +406,8 @@ function Dashboard() {
                       </button>
                       {modifiedQuestionIds.size > 0 && (
                         <p className="text-center text-xs text-amber-700">
-                          Update the answer key before printing to refresh answers for edited questions.
+                          Update the answer key before printing to refresh answers for edited
+                          questions.
                         </p>
                       )}
                       <button
@@ -420,6 +452,10 @@ function Dashboard() {
               {/* Left Column: Input and configuration panels */}
               <div className="space-y-6 xl:col-span-8">
                 <UploadCard
+                  kbSubject={kbSubject}
+                  setKbSubject={setKbSubject}
+                  kbChapter={kbChapter}
+                  setKbChapter={setKbChapter}
                   files={files}
                   fileError={fileError}
                   maxMb={maxMb}
@@ -464,7 +500,20 @@ function Dashboard() {
                       </>
                     ) : (
                       <>
-                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12" /><path d="m8 11 4 4 4-4" /><path d="M4 21h16" /></svg>
+                        <svg
+                          viewBox="0 0 24 24"
+                          className="h-4 w-4"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                        >
+                          <path d="M12 3v12" />
+                          <path d="m8 11 4 4 4-4" />
+                          <path d="M4 21h16" />
+                        </svg>
                         Generate Question Paper
                       </>
                     )}
@@ -506,7 +555,21 @@ function Header({ healthOk, health }: { healthOk: boolean; health: HealthRespons
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3.5">
           <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-[oklch(0.42_0.09_255)] text-primary-foreground shadow-[0_2px_8px_-2px_oklch(0.32_0.07_257/0.4)]">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M6 4h8l4 4v12H6z" /><path d="M14 4v4h4" /><path d="M8 13h8" /><path d="M8 17h6" /></svg>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M6 4h8l4 4v12H6z" />
+              <path d="M14 4v4h4" />
+              <path d="M8 13h8" />
+              <path d="M8 17h6" />
+            </svg>
           </div>
           <div>
             <h1 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
@@ -546,10 +609,11 @@ function Header({ healthOk, health }: { healthOk: boolean; health: HealthRespons
             </span>
           )}
           <div
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm ${healthOk
+            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-sm ${
+              healthOk
                 ? "border-emerald-200/80 bg-emerald-50/90 text-emerald-800"
                 : "border-red-200/80 bg-red-50/90 text-red-800"
-              }`}
+            }`}
           >
             <span
               className={`h-1.5 w-1.5 rounded-full ${healthOk ? "bg-emerald-500" : "bg-red-500"}`}
@@ -668,7 +732,9 @@ function FileTypeIcon({ ext }: { ext: string }) {
   };
   const cls = colors[ext] ?? "bg-muted text-muted-foreground border-border";
   return (
-    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-[10px] font-bold uppercase ${cls}`}>
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-[10px] font-bold uppercase ${cls}`}
+    >
       {ext.slice(0, 4) || "file"}
     </span>
   );
@@ -681,6 +747,10 @@ function UploadCard({
   onAdd,
   onRemove,
   fileInputRef,
+  kbSubject,
+  setKbSubject,
+  kbChapter,
+  setKbChapter,
   googleSessionId,
   googleSelections,
   setGoogleSelections,
@@ -695,6 +765,10 @@ function UploadCard({
   onAdd: (f: FileList | File[]) => void;
   onRemove: (i: number) => void;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
+  kbSubject: string;
+  setKbSubject: (s: string) => void;
+  kbChapter: string;
+  setKbChapter: (s: string) => void;
   googleSessionId: string | null;
   googleSelections: SelectedGoogleItem[];
   setGoogleSelections: React.Dispatch<React.SetStateAction<SelectedGoogleItem[]>>;
@@ -704,7 +778,7 @@ function UploadCard({
   onDisconnectGoogle: () => void;
 }) {
   const [drag, setDrag] = useState(false);
-  const [tab, setTab] = useState<"local" | "drive" | "classroom">("local");
+  const [tab, setTab] = useState<"knowledge" | "local" | "drive" | "classroom">("knowledge");
 
   return (
     <Card
@@ -717,40 +791,88 @@ function UploadCard({
       <div className="mb-5 flex border-b border-border/40 pb-1.5 overflow-x-auto gap-2">
         <button
           type="button"
-          onClick={() => setTab("local")}
-          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${tab === "local"
+          onClick={() => setTab("knowledge")}
+          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            tab === "knowledge"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+          }`}
         >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <rect width="20" height="14" x="2" y="3" rx="2" /><line x1="8" x2="16" y1="21" y2="21" /><line x1="12" x2="12" y1="17" y2="21" />
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+            <path d="M6 6h10" />
+            <path d="M6 10h10" />
+          </svg>
+          Knowledge Base
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("local")}
+          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            tab === "local"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            <rect width="20" height="14" x="2" y="3" rx="2" />
+            <line x1="8" x2="16" y1="21" y2="21" />
+            <line x1="12" x2="12" y1="17" y2="21" />
           </svg>
           Local Files
         </button>
         <button
           type="button"
           onClick={() => setTab("drive")}
-          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${tab === "drive"
+          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            tab === "drive"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+          }`}
         >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M22 19L17 5H7L2 19H22Z" /><path d="M12 5V19" />
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            <path d="M22 19L17 5H7L2 19H22Z" />
+            <path d="M12 5V19" />
           </svg>
           Google Drive
         </button>
         <button
           type="button"
           onClick={() => setTab("classroom")}
-          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${tab === "classroom"
+          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            tab === "classroom"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
+          }`}
         >
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" /><path d="M6 6h10" /><path d="M6 10h10" />
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+            <path d="M6 6h10" />
+            <path d="M6 10h10" />
           </svg>
           Classroom
         </button>
@@ -775,6 +897,15 @@ function UploadCard({
 
       {/* Browser sections content */}
       <div className="relative">
+        {tab === "knowledge" && (
+          <KnowledgeBaseBrowser
+            kbSubject={kbSubject}
+            setKbSubject={setKbSubject}
+            kbChapter={kbChapter}
+            setKbChapter={setKbChapter}
+          />
+        )}
+
         {tab === "local" && (
           <div
             onDragOver={(e) => {
@@ -787,10 +918,11 @@ function UploadCard({
               setDrag(false);
               if (e.dataTransfer.files) onAdd(e.dataTransfer.files);
             }}
-            className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${drag
+            className={`relative overflow-hidden rounded-xl border-2 border-dashed transition-all duration-200 ${
+              drag
                 ? "border-primary bg-primary/[0.06] shadow-[inset_0_0_0_1px_oklch(0.32_0.07_257/0.15)]"
                 : "border-[oklch(0.85_0.03_240)] bg-[oklch(0.975_0.012_245/0.5)] hover:border-primary/35 hover:bg-[oklch(0.97_0.015_240/0.7)]"
-              }`}
+            }`}
           >
             <div
               aria-hidden
@@ -803,8 +935,19 @@ function UploadCard({
             />
             <div className="relative flex flex-col items-center px-6 py-10 text-center sm:flex-row sm:items-center sm:gap-8 sm:text-left">
               <div className="mb-5 flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-primary/15 bg-white shadow-[0_4px_16px_-6px_oklch(0.32_0.07_257/0.15)] sm:mb-0">
-                <svg viewBox="0 0 24 24" className="h-7 w-7 text-primary" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M12 16V4" /><path d="m7 10 5-5 5 5" /><path d="M4 20h16" />
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-7 w-7 text-primary"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <path d="M12 16V4" />
+                  <path d="m7 10 5-5 5 5" />
+                  <path d="M4 20h16" />
                 </svg>
               </div>
               <div className="flex-1">
@@ -850,13 +993,22 @@ function UploadCard({
         {tab !== "local" && !googleSessionId && (
           <div className="flex flex-col items-center justify-center py-10 text-center rounded-xl border border-dashed border-[oklch(0.85_0.03_240)] bg-[oklch(0.975_0.012_245/0.5)]">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 text-sky-600 shadow-sm">
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                viewBox="0 0 24 24"
+                className="h-6 w-6"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3Z" />
               </svg>
             </div>
             <h3 className="text-sm font-bold text-foreground">Import from Google Workspace</h3>
             <p className="mt-1.5 max-w-sm px-4 text-xs text-muted-foreground leading-relaxed">
-              Connect your account to index syllabus documents, notes, and worksheets directly from your Google Drive folders and Google Classroom classes.
+              Connect your account to index syllabus documents, notes, and worksheets directly from
+              your Google Drive folders and Google Classroom classes.
             </p>
             <button
               type="button"
@@ -912,11 +1064,19 @@ function UploadCard({
                 >
                   <FileTypeIcon ext={ext} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-foreground" title={f.name}>{f.name}</p>
+                    <p className="truncate text-xs font-semibold text-foreground" title={f.name}>
+                      {f.name}
+                    </p>
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                      <span>{sizeMb >= 1 ? `${sizeMb.toFixed(2)} MB` : `${(f.size / 1024).toFixed(1)} KB`}</span>
+                      <span>
+                        {sizeMb >= 1
+                          ? `${sizeMb.toFixed(2)} MB`
+                          : `${(f.size / 1024).toFixed(1)} KB`}
+                      </span>
                       <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-                      <span className="rounded bg-slate-100 px-1 py-0.2 text-[9px] font-semibold text-slate-600">Local Upload</span>
+                      <span className="rounded bg-slate-100 px-1 py-0.2 text-[9px] font-semibold text-slate-600">
+                        Local Upload
+                      </span>
                     </p>
                   </div>
                   <button
@@ -945,7 +1105,9 @@ function UploadCard({
                     <FileTypeIcon ext={ext} />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-foreground" title={item.name}>{item.name}</p>
+                    <p className="truncate text-xs font-semibold text-foreground" title={item.name}>
+                      {item.name}
+                    </p>
                     <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
                       <span className="rounded bg-sky-100 px-1 py-0.2 text-[9px] font-semibold text-sky-700">
                         {item.source === "drive" ? "Google Drive" : "Classroom"}
@@ -998,18 +1160,21 @@ function GoogleDriveBrowser({
 
   const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id;
 
-  const loadFolder = useCallback(async (folderId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getGoogleDriveItems(folderId, sessionId);
-      setItems(data);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId, setError]);
+  const loadFolder = useCallback(
+    async (folderId: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getGoogleDriveItems(folderId, sessionId);
+        setItems(data);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [sessionId, setError],
+  );
 
   useEffect(() => {
     loadFolder(currentFolderId);
@@ -1055,8 +1220,9 @@ function GoogleDriveBrowser({
                 type="button"
                 onClick={() => onBreadcrumbClick(idx)}
                 disabled={isLast}
-                className={`transition-colors hover:text-foreground cursor-pointer ${isLast ? "text-primary font-bold" : ""
-                  }`}
+                className={`transition-colors hover:text-foreground cursor-pointer ${
+                  isLast ? "text-primary font-bold" : ""
+                }`}
               >
                 {crumb.name}
               </button>
@@ -1086,17 +1252,28 @@ function GoogleDriveBrowser({
               return (
                 <li
                   key={item.id}
-                  className={`flex items-center justify-between gap-4 px-4 py-2 hover:bg-slate-50 transition-colors ${isDisabled ? "opacity-40" : ""
-                    }`}
+                  className={`flex items-center justify-between gap-4 px-4 py-2 hover:bg-slate-50 transition-colors ${
+                    isDisabled ? "opacity-40" : ""
+                  }`}
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     {/* Icon */}
                     {isFolder ? (
-                      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-amber-500" fill="currentColor">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5 shrink-0 text-amber-500"
+                        fill="currentColor"
+                      >
                         <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
                       </svg>
                     ) : (
-                      <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2">
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5 shrink-0 text-sky-500"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                         <polyline points="14 2 14 8 20 8" />
                       </svg>
@@ -1112,7 +1289,9 @@ function GoogleDriveBrowser({
                         {item.name}
                       </button>
                     ) : (
-                      <span className="truncate text-sm font-medium text-foreground">{item.name}</span>
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {item.name}
+                      </span>
                     )}
                   </div>
 
@@ -1122,10 +1301,11 @@ function GoogleDriveBrowser({
                       <button
                         type="button"
                         onClick={() => toggleSelect(item)}
-                        className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${isSelected
+                        className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                          isSelected
                             ? "bg-amber-100 text-amber-800 border-amber-300"
                             : "bg-white text-muted-foreground border-border hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300"
-                          }`}
+                        }`}
                       >
                         {isSelected ? "Folder Selected" : "Select Folder"}
                       </button>
@@ -1137,10 +1317,11 @@ function GoogleDriveBrowser({
                       <button
                         type="button"
                         onClick={() => toggleSelect(item)}
-                        className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${isSelected
+                        className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                          isSelected
                             ? "bg-primary text-primary-foreground border-primary shadow-sm"
                             : "bg-white text-foreground border-border hover:bg-primary/[0.04] hover:border-primary/20"
-                          }`}
+                        }`}
                       >
                         {isSelected ? "Selected" : "Select"}
                       </button>
@@ -1186,18 +1367,21 @@ function GoogleClassroomBrowser({
     }
   }, [sessionId, setError]);
 
-  const loadMaterials = useCallback(async (courseId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getGoogleClassroomCourseMaterials(courseId, sessionId);
-      setMaterials(data);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId, setError]);
+  const loadMaterials = useCallback(
+    async (courseId: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getGoogleClassroomCourseMaterials(courseId, sessionId);
+        setMaterials(data);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [sessionId, setError],
+  );
 
   useEffect(() => {
     if (view === "courses") {
@@ -1245,7 +1429,15 @@ function GoogleClassroomBrowser({
             onClick={onBack}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-semibold cursor-pointer"
           >
-            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="m15 18-6-6 6-6" />
             </svg>
             Back to Classes
@@ -1275,12 +1467,20 @@ function GoogleClassroomBrowser({
                   className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-slate-50 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5 shrink-0 text-emerald-600"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
                       <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
                     </svg>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-foreground">{course.name}</p>
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {course.name}
+                      </p>
                     </div>
                   </div>
                   <button
@@ -1308,19 +1508,28 @@ function GoogleClassroomBrowser({
                   className="flex items-center justify-between gap-4 px-4 py-2 hover:bg-slate-50 transition-colors"
                 >
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0 text-sky-500" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5 shrink-0 text-sky-500"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
                       <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
                       <polyline points="14 2 14 8 20 8" />
                     </svg>
-                    <span className="truncate text-sm font-medium text-foreground">{material.name}</span>
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {material.name}
+                    </span>
                   </div>
                   <button
                     type="button"
                     onClick={() => toggleSelect(material)}
-                    className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${isSelected
+                    className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                      isSelected
                         ? "bg-primary text-primary-foreground border-primary shadow-sm"
                         : "bg-white text-foreground border-border hover:bg-primary/[0.04] hover:border-primary/20"
-                      }`}
+                    }`}
                   >
                     {isSelected ? "Selected" : "Select"}
                   </button>
@@ -1329,6 +1538,206 @@ function GoogleClassroomBrowser({
             })}
           </ul>
         )}
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeBaseBrowser({
+  kbSubject,
+  setKbSubject,
+  kbChapter,
+  setKbChapter,
+}: {
+  kbSubject: string;
+  setKbSubject: (s: string) => void;
+  kbChapter: string;
+  setKbChapter: (s: string) => void;
+}) {
+  const [catalog, setCatalog] = useState<Record<string, CatalogNode>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [newSubject, setNewSubject] = useState("");
+  const [newChapter, setNewChapter] = useState("");
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const loadCatalog = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getKnowledgeList();
+      if (data.success) {
+        setCatalog(data.catalog);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCatalog();
+  }, []);
+
+  const onUpload = async () => {
+    if (!newSubject || !newChapter || uploadFiles.length === 0) {
+      alert(
+        "Please enter subject, chapter and select at least one file to upload to the Knowledge Base.",
+      );
+      return;
+    }
+    setUploading(true);
+    try {
+      await uploadKnowledge(newSubject, newChapter, uploadFiles);
+      setNewSubject("");
+      setNewChapter("");
+      setUploadFiles([]);
+      await loadCatalog();
+      alert("Successfully added to Knowledge Base!");
+    } catch (e) {
+      alert("Error: " + (e as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* View Catalog */}
+      <div className="rounded-lg border border-border/60 bg-white/70 shadow-inner p-4">
+        <h3 className="text-sm font-bold text-foreground mb-3">Available in Knowledge Base</h3>
+        {loading ? (
+          <div className="flex h-[150px] items-center justify-center text-muted-foreground text-xs">
+            Loading knowledge base...
+          </div>
+        ) : error ? (
+          <div className="text-xs text-red-500">{error}</div>
+        ) : Object.keys(catalog).length === 0 ? (
+          <div className="flex h-[150px] items-center justify-center text-muted-foreground text-xs italic">
+            Knowledge Base is empty. Upload some notes below!
+          </div>
+        ) : (
+          <div className="max-h-[250px] overflow-y-auto space-y-4">
+            {Object.entries(catalog).map(([subjKey, subjNode]) => (
+              <div key={subjKey} className="space-y-2">
+                <div className="font-semibold text-sm text-sky-800 flex items-center gap-2">
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z" />
+                    <path d="M6 6h10" />
+                    <path d="M6 10h10" />
+                  </svg>
+                  {subjNode.name}
+                </div>
+                <div className="pl-6 space-y-1">
+                  {subjNode.children &&
+                    Object.entries(subjNode.children).map(([chapKey, chapNode]) => {
+                      const isSelected = kbSubject === subjNode.name && kbChapter === chapNode.name;
+                      return (
+                        <div
+                          key={chapKey}
+                          className={`flex items-center justify-between p-2 rounded border transition-colors ${isSelected ? "bg-primary/10 border-primary text-primary-foreground" : "bg-slate-50 border-slate-100 hover:bg-slate-100 hover:border-slate-200"}`}
+                        >
+                          <div>
+                            <div
+                              className={`text-xs font-semibold ${isSelected ? "text-primary" : "text-slate-700"}`}
+                            >
+                              {chapNode.name}
+                            </div>
+                            <div
+                              className={`text-[10px] ${isSelected ? "text-primary/70" : "text-slate-500"}`}
+                            >
+                              {chapNode.chunk_count} chunks embedded
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setKbSubject("");
+                                setKbChapter("");
+                              } else {
+                                setKbSubject(subjNode.name);
+                                setKbChapter(chapNode.name);
+                              }
+                            }}
+                            className={`px-3 py-1 rounded text-xs font-bold cursor-pointer transition ${isSelected ? "bg-primary text-white shadow-sm" : "bg-white border text-foreground hover:bg-primary/5"}`}
+                          >
+                            {isSelected ? "Selected" : "Select"}
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Upload New to KB */}
+      <div className="rounded-lg border border-dashed border-[oklch(0.85_0.03_240)] bg-[oklch(0.975_0.012_245/0.5)] p-4">
+        <h3 className="text-sm font-bold text-foreground mb-3">Add Notes to Knowledge Base</h3>
+        <div className="grid grid-cols-2 gap-4 mb-3">
+          <input
+            type="text"
+            placeholder="Subject (e.g. Physics)"
+            className={inputCls + " py-1.5 text-xs"}
+            value={newSubject}
+            onChange={(e) => setNewSubject(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Chapter (e.g. Thermodynamics)"
+            className={inputCls + " py-1.5 text-xs"}
+            value={newChapter}
+            onChange={(e) => setNewChapter(e.target.value)}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-slate-200 text-slate-800 hover:bg-slate-300 px-3 py-1.5 rounded text-xs font-semibold transition cursor-pointer"
+            >
+              Choose Files...
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {uploadFiles.length} files selected
+            </span>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.txt,.docx,.xlsx"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files) setUploadFiles(Array.from(e.target.files));
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={onUpload}
+            disabled={uploading || uploadFiles.length === 0 || !newSubject || !newChapter}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-1.5 rounded text-xs font-bold transition cursor-pointer"
+          >
+            {uploading ? "Chunking & Uploading..." : "Upload & Vectorize"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1495,10 +1904,11 @@ function QuestionsCard({
         />
       </div>
       <div
-        className={`mt-4 flex items-center justify-between rounded-md border px-4 py-2.5 text-sm ${ok
+        className={`mt-4 flex items-center justify-between rounded-md border px-4 py-2.5 text-sm ${
+          ok
             ? "border-emerald-200 bg-emerald-50 text-emerald-800"
             : "border-amber-200 bg-amber-50 text-amber-800"
-          }`}
+        }`}
       >
         <span className="font-medium">Calculated marks</span>
         <span>
@@ -1559,10 +1969,11 @@ function DifficultyCard({
         })}
       </div>
       <div
-        className={`mt-4 flex items-center justify-between rounded-md border px-4 py-2.5 text-sm ${ok
+        className={`mt-4 flex items-center justify-between rounded-md border px-4 py-2.5 text-sm ${
+          ok
             ? "border-emerald-200 bg-emerald-50 text-emerald-800"
             : "border-amber-200 bg-amber-50 text-amber-800"
-          }`}
+        }`}
       >
         <span className="font-medium">Total</span>
         <span>
@@ -1635,7 +2046,17 @@ function ResultsPanel({
       ) : (
         <div className="rounded-lg border border-dashed border-border/80 bg-[oklch(0.975_0.012_245/0.4)] px-4 py-8 text-center">
           <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden><path d="M6 4h8l4 4v12H6z" /><path d="M14 4v4h4" /></svg>
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden
+            >
+              <path d="M6 4h8l4 4v12H6z" />
+              <path d="M14 4v4h4" />
+            </svg>
           </div>
           <p className="text-sm font-medium text-foreground">Ready to generate</p>
           <p className="mt-1 text-xs text-muted-foreground">
@@ -1744,7 +2165,10 @@ function PreviewStudio({
       </div>
 
       {activeTab === "questions" ? (
-        <Card title="Draft Question Paper" description="Review and edit the wording of questions. Content will update in the printed PDF.">
+        <Card
+          title="Draft Question Paper"
+          description="Review and edit the wording of questions. Content will update in the printed PDF."
+        >
           <div className="space-y-8">
             {sections.map((sec) => {
               const secQs = questions.filter((q) => q.marks === sec.marks);
@@ -1759,7 +2183,10 @@ function PreviewStudio({
                   </div>
                   <div className="space-y-5">
                     {secQs.map((q, idx) => (
-                      <div key={q.id} className="relative flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors">
+                      <div
+                        key={q.id}
+                        className="relative flex gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors"
+                      >
                         <div className="text-sm font-bold text-slate-400 mt-2 shrink-0">
                           Q{idx + 1}.
                         </div>
@@ -1770,14 +2197,14 @@ function PreviewStudio({
                               const val = e.target.value;
                               setQuestions((prev) =>
                                 prev.map((item) =>
-                                  item.id === q.id ? { ...item, question: val } : item
-                                )
+                                  item.id === q.id ? { ...item, question: val } : item,
+                                ),
                               );
                               // Sync answer key question too
                               setAnswerKey((prev) =>
                                 prev.map((item) =>
-                                  item.id === q.id ? { ...item, question: val } : item
-                                )
+                                  item.id === q.id ? { ...item, question: val } : item,
+                                ),
                               );
                               onQuestionEdited(q.id);
                             }}
@@ -1809,10 +2236,16 @@ function PreviewStudio({
           </div>
         </Card>
       ) : (
-        <Card title="Draft Answer Key &amp; Scheme" description="Tweak model answers, key scoring points, and marks breakdown for grading.">
+        <Card
+          title="Draft Answer Key &amp; Scheme"
+          description="Tweak model answers, key scoring points, and marks breakdown for grading."
+        >
           <div className="space-y-6">
             {answerKey.map((a, idx) => (
-              <div key={a.id} className="p-5 rounded-xl bg-slate-50 border border-slate-100 space-y-4">
+              <div
+                key={a.id}
+                className="p-5 rounded-xl bg-slate-50 border border-slate-100 space-y-4"
+              >
                 <div className="flex items-start justify-between border-b pb-2">
                   <h4 className="text-sm font-bold text-slate-800">
                     Question {idx + 1} ({a.marks} Marks)
@@ -1834,8 +2267,8 @@ function PreviewStudio({
                         const val = e.target.value;
                         setAnswerKey((prev) =>
                           prev.map((item) =>
-                            item.id === a.id ? { ...item, model_answer: val } : item
-                          )
+                            item.id === a.id ? { ...item, model_answer: val } : item,
+                          ),
                         );
                       }}
                       rows={4}
@@ -1855,8 +2288,8 @@ function PreviewStudio({
                         const lines = e.target.value.split("\n");
                         setAnswerKey((prev) =>
                           prev.map((item) =>
-                            item.id === a.id ? { ...item, key_points: lines } : item
-                          )
+                            item.id === a.id ? { ...item, key_points: lines } : item,
+                          ),
                         );
                       }}
                       rows={3}
@@ -1877,8 +2310,8 @@ function PreviewStudio({
                         const val = e.target.value;
                         setAnswerKey((prev) =>
                           prev.map((item) =>
-                            item.id === a.id ? { ...item, marks_breakdown: val } : item
-                          )
+                            item.id === a.id ? { ...item, marks_breakdown: val } : item,
+                          ),
                         );
                       }}
                       className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm text-foreground focus:border-primary/30 focus:outline-none focus:ring-1 focus:ring-primary/20"

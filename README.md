@@ -37,7 +37,9 @@ This repository is structured as a monorepo containing both the frontend and bac
    Copy `.env.example` to `.env` and fill in your API keys and configuration.
 5. Run the server:
    ```bash
-   python -m app.main
+   python -m app.main 
+   or
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
    ```
    The backend API will run on `http://localhost:8000`.
 

@@ -1,7 +1,6 @@
 /** Backend API base URL. In dev, defaults to Vite proxy `/api` → localhost:8000. */
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ??
-  (import.meta.env.DEV ? "/api" : "http://localhost:8000");
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "/api" : "http://localhost:8000");
 
 export interface HealthResponse {
   status: string;
@@ -20,6 +19,25 @@ export interface ValidatedQuestion {
   bloom_level: string;
   question_type: string;
   image_path?: string;
+}
+
+export interface CatalogNode {
+  name: string;
+  type: "subject" | "chapter" | "document";
+  chunk_count?: number;
+  children?: Record<string, CatalogNode>;
+}
+
+export interface KnowledgeListResponse {
+  success: boolean;
+  catalog: Record<string, CatalogNode>;
+}
+
+export interface KnowledgeUploadResponse {
+  success: boolean;
+  message: string;
+  file_names: string[];
+  chunk_count: number;
 }
 
 export interface AnswerKeyItem {
@@ -60,10 +78,7 @@ export interface PapersResponse {
   files: string[];
 }
 
-function parseApiError(
-  data: unknown,
-  status: number,
-): { message: string; errors?: string[] } {
+function parseApiError(data: unknown, status: number): { message: string; errors?: string[] } {
   if (!data || typeof data !== "object") {
     return { message: `Request failed (${status})` };
   }
@@ -146,9 +161,7 @@ export async function getGoogleDriveItems(
   return res.json();
 }
 
-export async function getGoogleClassroomCourses(
-  sessionId: string,
-): Promise<GoogleItem[]> {
+export async function getGoogleClassroomCourses(sessionId: string): Promise<GoogleItem[]> {
   const res = await apiFetch(
     `/google/classroom/courses?session_id=${encodeURIComponent(sessionId)}`,
   );
@@ -204,6 +217,35 @@ export async function listPapers(): Promise<PapersResponse> {
   const res = await apiFetch("/papers");
   if (!res.ok) throw new Error("Failed to load papers");
   return res.json();
+}
+
+export async function getKnowledgeList(): Promise<KnowledgeListResponse> {
+  const res = await apiFetch("/knowledge/list");
+  if (!res.ok) throw new Error("Failed to load knowledge base catalog");
+  return res.json();
+}
+
+export async function uploadKnowledge(
+  subject: string,
+  chapter: string,
+  files: File[],
+): Promise<KnowledgeUploadResponse> {
+  const body = new FormData();
+  body.append("subject", subject);
+  body.append("chapter", chapter);
+  files.forEach((f) => body.append("files", f));
+
+  const res = await apiFetch("/knowledge/upload", { method: "POST", body });
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    const { message, errors } = parseApiError(data, res.status);
+    const err = new Error(message) as Error & { errors?: string[] };
+    err.errors = errors;
+    throw err;
+  }
+
+  return data as KnowledgeUploadResponse;
 }
 
 export async function downloadFile(filename: string): Promise<void> {

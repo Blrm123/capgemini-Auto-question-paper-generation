@@ -91,37 +91,30 @@ class Orchestrator:
         uploaded_file_paths: list[str],
         distribution: QuestionDistribution,
         paper_metadata: Optional[PaperMetadata] = None,
+        filters: Optional[dict[str, Any]] = None,
     ) -> OrchestratorResult:
         """
         Execute the full question paper generation pipeline.
 
         Steps:
           1. Validate inputs
-          2. Ingest documents via RAG (chunk + embed)
+          2. Ingest documents via RAG (chunk + embed) (if files are provided)
           3. Retrieve context chunks for agents
           4. Build initial AgentState
           5. Invoke LangGraph workflow
           6. Generate PDFs if workflow succeeded
           7. Return OrchestratorResult
-
-        Args:
-            uploaded_file_paths: Paths to uploaded syllabus/course documents.
-            distribution:        Question distribution parameters.
-            paper_metadata:      Optional PDF header metadata.
-
-        Returns:
-            OrchestratorResult with paths, errors, and timing.
         """
         start_time = time.perf_counter()
         logger.info(
             f"Orchestrator: Starting question paper generation pipeline "
-            f"with {len(uploaded_file_paths)} file(s)."
+            f"with {len(uploaded_file_paths)} file(s) and filters: {filters}."
         )
 
         # ------------------------------------------------------------------
         # 1. Validate inputs before entering the workflow
         # ------------------------------------------------------------------
-        validation_errors = self._validate_inputs(uploaded_file_paths, distribution)
+        validation_errors = self._validate_inputs(uploaded_file_paths, distribution) if uploaded_file_paths else []
         if validation_errors:
             elapsed = time.perf_counter() - start_time
             for err in validation_errors:
@@ -135,16 +128,21 @@ class Orchestrator:
             )
 
         # ------------------------------------------------------------------
-        # 2. Ingest via RAG and prepare agent contexts
+        # 2. Ingest via RAG (or load) and prepare agent contexts
         # ------------------------------------------------------------------
         rag_chunk_count = 0
         rag_debug: dict[str, Any] = {}
         try:
             rag_service = RAGService()
-            rag_chunk_count = rag_service.ingest_files(uploaded_file_paths)
-            if rag_chunk_count == 0:
-                raise RuntimeError("RAG ingestion produced no chunks from the uploaded file(s).")
-            contexts = rag_service.prepare_agent_contexts(file_count=len(uploaded_file_paths))
+            if uploaded_file_paths:
+                rag_chunk_count = rag_service.ingest_files(uploaded_file_paths)
+                if rag_chunk_count == 0:
+                    raise RuntimeError("RAG ingestion produced no chunks from the uploaded file(s).")
+            else:
+                rag_service._pipeline.load()
+                rag_chunk_count = len(rag_service._pipeline.all_chunks)
+            
+            contexts = rag_service.prepare_agent_contexts(file_count=len(uploaded_file_paths), filters=filters)
             rag_debug = contexts.get("debug", {})
         except Exception as exc:
             elapsed = time.perf_counter() - start_time

@@ -21,7 +21,12 @@ class HybridRetriever:
         self.all_chunks = all_chunks
         # Build BM25 index
         tokenized_corpus = [doc.page_content.lower().split() for doc in all_chunks]
-        self.bm25 = BM25Okapi(tokenized_corpus)
+        # Only initialize if there are actual tokens to avoid ZeroDivisionError
+        if tokenized_corpus and sum(len(doc) for doc in tokenized_corpus) > 0:
+            self.bm25 = BM25Okapi(tokenized_corpus)
+        else:
+            self.bm25 = None
+            logger.warning("BM25 index not created because the corpus has no tokens.")
         logger.info(f"HybridRetriever initialized with {len(all_chunks)} chunks")
 
     def _dense_retrieve(self, query: str, k: int) -> List[Tuple[Document, float]]:
@@ -29,6 +34,8 @@ class HybridRetriever:
         return results  # List of (Document, score)
 
     def _sparse_retrieve(self, query: str, k: int) -> List[Document]:
+        if not self.bm25:
+            return []
         tokens = query.lower().split()
         scores = self.bm25.get_scores(tokens)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
