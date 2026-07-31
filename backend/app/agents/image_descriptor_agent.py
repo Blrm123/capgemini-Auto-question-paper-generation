@@ -189,18 +189,19 @@ class ImageDescriptorAgent:
         syllabus_hint = ", ".join(topic_names[:20]) if topic_names else ""
 
         # ----------------------------------------------------------------
-        # 4. Describe each selected image with Gemini vision
+        # 4. Describe each selected image with Gemini vision (CONCURRENT)
         # ----------------------------------------------------------------
         image_topic_map: Dict[str, Any] = {}
+        import concurrent.futures
 
-        for rec in selected_records:
+        def _process_image(rec):
             img_path_abs = str(settings.paths.BASE_DIR / rec.relative_path)
             img_id = rec.image_id
 
             # Verify image file exists
             if not os.path.isfile(img_path_abs):
                 logger.warning(f"{AGENT_NAME}: Image file not found: {img_path_abs}. Skipping.")
-                continue
+                return img_id, None, None
 
             logger.info(
                 f"{AGENT_NAME}: Describing image {img_id} "
@@ -215,25 +216,34 @@ class ImageDescriptorAgent:
                 parsed = _parse_structured_description(raw_description)
                 parsed["description"] = raw_description
                 parsed["image_path"] = rec.relative_path
-                image_topic_map[img_id] = parsed
-
+                
                 logger.info(
                     f"{AGENT_NAME}: {img_id} -> concept='{parsed.get('concept', '')[:60]}'"
                 )
+                return img_id, parsed, None
             except Exception as vision_err:
                 error_msg = f"{AGENT_NAME}: Vision description failed for {img_id}: {vision_err}"
                 logger.warning(error_msg)
-                errors.append(error_msg)
-                image_topic_map[img_id] = {
-                    "concept": rec.caption,
+                fallback = {
+                    "concept": getattr(rec, "caption", ""),
                     "unit_hint": "",
                     "components": "",
                     "learning_objective": "",
                     "exam_q1": "",
                     "exam_q2": "",
-                    "description": rec.caption,
+                    "description": getattr(rec, "caption", ""),
                     "image_path": rec.relative_path,
                 }
+                return img_id, fallback, error_msg
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_IMAGES_TO_DESCRIBE) as executor:
+            futures = [executor.submit(_process_image, rec) for rec in selected_records]
+            for future in concurrent.futures.as_completed(futures):
+                img_id, parsed, error_msg = future.result()
+                if parsed is not None:
+                    image_topic_map[img_id] = parsed
+                if error_msg:
+                    errors.append(error_msg)
 
         # ----------------------------------------------------------------
         # 5. Update rag_chunks with enriched image_explanation

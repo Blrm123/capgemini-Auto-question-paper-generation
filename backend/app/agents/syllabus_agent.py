@@ -94,41 +94,9 @@ class SyllabusAgent:
         except (RuntimeError, ValueError) as exc:
             logger.warning(f"{AGENT_NAME}: LLM call with syllabus_context failed: {exc}. Trying fallback to content_context.")
 
-        # If LLM returned empty list or failed, fall back to content_context
-        if not isinstance(raw_data, list) or len(raw_data) == 0:
-            logger.warning(
-                f"{AGENT_NAME}: LLM returned no syllabus topics for syllabus_context. "
-                "Falling back to content_context."
-            )
-            content_context: Optional[str] = state.get("content_context")
-            if content_context and content_context.strip():
-                try:
-                    # Truncate fallback context to 15000 chars to avoid TPM limit errors
-                    truncated_context = content_context[:15000]
-                    user_prompt = build_syllabus_user_prompt(truncated_context)
-                    raw_data = self.llm.call_llm_for_json(
-                        system_prompt=SYLLABUS_SYSTEM_PROMPT,
-                        user_prompt=user_prompt,
-                        agent_name=AGENT_NAME,
-                    )
-                except (RuntimeError, ValueError) as exc:
-                    error_msg = f"{AGENT_NAME}: LLM fallback call with content_context failed — {exc}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-                    return {
-                        "syllabus_topics": [],
-                        "current_agent": AGENT_NAME,
-                        "status": "failed",
-                        "errors": errors,
-                    }
-            else:
-                logger.warning(f"{AGENT_NAME}: content_context is empty or missing. Cannot perform fallback.")
-
-        # ------------------------------------------------------------------
-        # 3. Validate response is a non-empty list
-        # ------------------------------------------------------------------
         # ------------------------------------------------------------------
         # 3. Handle wrapper dicts and nested arrays (e.g. [[{...}]])
+        # Do this BEFORE the fallback check, as the LLM might return a valid dict.
         # ------------------------------------------------------------------
         if isinstance(raw_data, dict):
             for key, val in raw_data.items():
@@ -155,6 +123,49 @@ class SyllabusAgent:
             _flatten(raw_data)
             if flat_items:
                 raw_data = flat_items
+
+        # If LLM returned empty list or failed, fall back to content_context
+        if not isinstance(raw_data, list) or len(raw_data) == 0:
+            logger.warning(
+                f"{AGENT_NAME}: LLM returned no syllabus topics for syllabus_context. "
+                "Falling back to content_context."
+            )
+            content_context: Optional[str] = state.get("content_context")
+            if content_context and content_context.strip():
+                try:
+                    # Truncate fallback context to 15000 chars to avoid TPM limit errors
+                    truncated_context = content_context[:15000]
+                    user_prompt = build_syllabus_user_prompt(truncated_context)
+                    raw_data = self.llm.call_llm_for_json(
+                        system_prompt=SYLLABUS_SYSTEM_PROMPT,
+                        user_prompt=user_prompt,
+                        agent_name=AGENT_NAME,
+                    )
+                    
+                    # Also unwrap the fallback result if needed
+                    if isinstance(raw_data, dict):
+                        for key, val in raw_data.items():
+                            if isinstance(val, list) and len(val) > 0:
+                                logger.info(f"{AGENT_NAME}: Unwrapped list from fallback dict key '{key}'.")
+                                raw_data = val
+                                break
+                    if isinstance(raw_data, list):
+                        flat_items = []
+                        _flatten(raw_data)
+                        if flat_items:
+                            raw_data = flat_items
+                except (RuntimeError, ValueError) as exc:
+                    error_msg = f"{AGENT_NAME}: LLM fallback call with content_context failed — {exc}"
+                    logger.error(error_msg)
+                    errors.append(error_msg)
+                    return {
+                        "syllabus_topics": [],
+                        "current_agent": AGENT_NAME,
+                        "status": "failed",
+                        "errors": errors,
+                    }
+            else:
+                logger.warning(f"{AGENT_NAME}: content_context is empty or missing. Cannot perform fallback.")
 
         if not isinstance(raw_data, list) or len(raw_data) == 0:
             result_description = (

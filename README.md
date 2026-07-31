@@ -39,7 +39,7 @@ This repository is structured as a monorepo containing both the frontend and bac
    ```bash
    python -m app.main 
    or
-   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   uvicorn app.main:app --host 0.0.0.0 --port 8000
    ```
    The backend API will run on `http://localhost:8000`.
 
