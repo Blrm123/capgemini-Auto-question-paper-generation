@@ -1,4 +1,4 @@
-# Agentic AI Question Paper Generator
+# QUBIT Backend
 
 An AI-powered question paper generator that automatically creates university/college-level question papers from uploaded syllabus documents, Google Drive files, and Google Classroom materials. It uses a **Multi-Agent AI architecture** built with LangGraph and powered by Gemini LLMs (with Groq fallback).
 
@@ -20,7 +20,7 @@ An AI-powered question paper generator that automatically creates university/col
 | Layer | Technology |
 |---|---|
 | **Backend** | Python 3.11+, FastAPI, Uvicorn |
-| **Frontend** | React, TypeScript, TailwindCSS, Vite |
+| **Frontend** | Next.js, React, TypeScript, TailwindCSS |
 | **AI Orchestration** | LangGraph |
 | **Vector Database (RAG)** | Pinecone (Knowledge Base) & FAISS (Local Temporary Memory) |
 | **Embeddings** | HuggingFace (`all-MiniLM-L6-v2`) |
@@ -145,7 +145,7 @@ pip install -r requirements.txt
 
 ### 4. Configure environment variables
 
-Copy the `.env` file and set your Groq API key:
+Create a `.env` file and set your Groq API key:
 
 ```env
 # Required

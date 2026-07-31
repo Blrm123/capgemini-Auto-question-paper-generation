@@ -32,6 +32,7 @@ from app.models.state import PaperMetadata, QuestionDistribution
 from app.services.logger import setup_logger
 from app.services.rag_service import RAGService
 from app.services.catalog_service import CatalogService
+from app.services.analytics_service import AnalyticsService
 from integrations.google_auth import GoogleOAuthStore
 from integrations.google_sources import (
     download_selection,
@@ -144,6 +145,16 @@ class PaperListResponse(BaseModel):
     """Response body for the /papers endpoint."""
     total: int
     files: list[str]
+
+
+class AnalyticsResponse(BaseModel):
+    """Response body for the /analytics endpoint."""
+    total_papers: int
+    total_questions: int
+    average_generation_time: float
+    bloom_distribution: dict
+    difficulty_distribution: dict
+    recent_activity: list[dict]
 
 
 class HealthResponse(BaseModel):
@@ -563,6 +574,11 @@ async def generate_question_paper(
             f"Question paper and answer key generated successfully "
             f"from {result.rag_chunk_count} RAG chunk(s) in {result.elapsed_seconds:.1f}s."
         )
+        if result.final_state and "validated_questions" in result.final_state:
+            AnalyticsService.record_generation(
+                validated_questions=result.final_state["validated_questions"],
+                elapsed_seconds=result.elapsed_seconds,
+            )
     else:
         message = (
             f"Generation failed after {result.elapsed_seconds:.1f}s. "
@@ -805,6 +821,28 @@ async def download_paper(filename: str) -> FileResponse:
         filename=filename,
     )
 
+
+# ---------------------------------------------------------------------------
+# Analytics API
+# ---------------------------------------------------------------------------
+
+@app.get(
+    "/analytics",
+    response_model=AnalyticsResponse,
+    tags=["Analytics"],
+    summary="Get aggregated statistics",
+)
+async def get_analytics() -> AnalyticsResponse:
+    """Returns aggregated analytics data for the dashboard."""
+    metrics = AnalyticsService.get_metrics()
+    return AnalyticsResponse(
+        total_papers=metrics["total_papers"],
+        total_questions=metrics["total_questions"],
+        average_generation_time=metrics["average_generation_time"],
+        bloom_distribution=metrics["bloom_distribution"],
+        difficulty_distribution=metrics["difficulty_distribution"],
+        recent_activity=metrics["recent_activity"],
+    )
 
 # ---------------------------------------------------------------------------
 # Entry point

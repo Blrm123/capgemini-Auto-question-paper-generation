@@ -1,6 +1,5 @@
-/** Backend API base URL. In dev, defaults to Vite proxy `/api` → localhost:8000. */
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? "/api" : "http://localhost:8000");
+/** Backend API base URL. In dev, defaults to localhost:8000. */
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
 export interface HealthResponse {
   status: string;
@@ -80,6 +79,15 @@ export interface PapersResponse {
   files: string[];
 }
 
+export interface AnalyticsResponse {
+  total_papers: number;
+  total_questions: number;
+  average_generation_time: number;
+  bloom_distribution: Record<string, number>;
+  difficulty_distribution: Record<string, number>;
+  recent_activity: { date: string; papers: number }[];
+}
+
 function parseApiError(data: unknown, status: number): { message: string; errors?: string[] } {
   if (!data || typeof data !== "object") {
     return { message: `Request failed (${status})` };
@@ -124,6 +132,12 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
 export async function getHealth(): Promise<HealthResponse> {
   const res = await apiFetch("/health");
   if (!res.ok) throw new Error("Health check failed");
+  return res.json();
+}
+
+export async function getAnalytics(): Promise<AnalyticsResponse> {
+  const res = await apiFetch("/analytics");
+  if (!res.ok) throw new Error("Failed to fetch analytics");
   return res.json();
 }
 

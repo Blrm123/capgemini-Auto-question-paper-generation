@@ -1,4 +1,4 @@
-# Auto Question Paper Generation
+# QUBIT
 
 A full-stack application that leverages Agentic RAG and Large Language Models to automatically generate university-grade question papers, answer keys, and marking schemes from uploaded syllabus documents and course materials.
 
@@ -6,7 +6,7 @@ A full-stack application that leverages Agentic RAG and Large Language Models to
 
 This repository is structured as a monorepo containing both the frontend and backend applications:
 
-- **`frontend/`**: The user interface built with React, Vite, and modern web technologies.
+- **`frontend/`**: The user interface built with Next.js, React, Tailwind CSS, and modern web technologies.
 - **`backend/`**: The FastAPI server that handles document ingestion, Agentic RAG pipelines, LLM orchestration, and PDF generation.
 
 ## Getting Started
@@ -34,7 +34,7 @@ This repository is structured as a monorepo containing both the frontend and bac
    pip install -r requirements.txt
    ```
 4. Set up environment variables:
-   Copy `.env.example` to `.env` and fill in your API keys and configuration.
+   Create a `.env` file and fill in your API keys and configuration.
 5. Run the server:
    ```bash
    python -m app.main 
@@ -58,7 +58,7 @@ This repository is structured as a monorepo containing both the frontend and bac
    npm run dev
    # or bun run dev
    ```
-   The UI will be available at `http://localhost:5173`.
+   The UI will be available at `http://localhost:3000`.
 
 ## Architecture Overview
 The system uses an advanced agentic workflow (powered by LangGraph) to ensure high-quality question papers. The pipeline includes:
