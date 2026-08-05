@@ -14,25 +14,26 @@ and shared across all requests.
 """
 
 import time
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Annotated, AsyncGenerator, Optional
+from typing import Annotated
 from uuid import uuid4
 
-import uvicorn
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+import uvicorn # pyrefly: ignore [missing-import]
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status # pyrefly: ignore [missing-import]
+from fastapi.middleware.cors import CORSMiddleware  # pyrefly: ignore [missing-import]
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse  # pyrefly: ignore [missing-import]
 from oauthlib.oauth2 import OAuth2Error
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field  # pyrefly: ignore [missing-import]
 
 from app.agents.orchestrator import Orchestrator, OrchestratorResult
 from app.config import settings
 from app.models.state import PaperMetadata, QuestionDistribution
+from app.services.analytics_service import AnalyticsService
+from app.services.catalog_service import CatalogService
 from app.services.logger import setup_logger
 from app.services.rag_service import RAGService
-from app.services.catalog_service import CatalogService
-from app.services.analytics_service import AnalyticsService
 from integrations.google_auth import GoogleOAuthStore
 from integrations.google_sources import (
     download_selection,
@@ -48,7 +49,8 @@ logger = setup_logger(__name__)
 # Application lifespan — creates the Orchestrator singleton
 # ---------------------------------------------------------------------------
 
-_orchestrator: Optional[Orchestrator] = None
+class AppState:
+    orchestrator: Orchestrator | None = None
 
 
 @asynccontextmanager
@@ -59,9 +61,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Startup:  instantiate Orchestrator (validates API key, creates dirs)
     Shutdown: log cleanup message
     """
-    global _orchestrator
     logger.info("Application starting up...")
-    _orchestrator = Orchestrator()
+    AppState.orchestrator = Orchestrator()
     logger.info("Application ready to serve requests.")
     yield
     logger.info("Application shutting down.")
@@ -95,14 +96,14 @@ class GenerateResponse(BaseModel):
     """Response body for the /generate endpoint."""
     success: bool
     message: str
-    final_pdf_path: Optional[str] = None
-    answer_key_pdf_path: Optional[str] = None
+    final_pdf_path: str | None = None
+    answer_key_pdf_path: str | None = None
     elapsed_seconds: float
     rag_chunk_count: int = 0
     errors: list[str] = Field(default_factory=list)
     debug: dict = Field(default_factory=dict)
-    questions: Optional[list[dict]] = None
-    answer_key: Optional[list[dict]] = None
+    questions: list[dict] | None = None
+    answer_key: list[dict] | None = None
 
 
 class PaperMetadataModel(BaseModel):
@@ -113,7 +114,7 @@ class PaperMetadataModel(BaseModel):
     exam_type: str
     duration: str
     maximum_marks: int
-    date: Optional[str] = None
+    date: str | None = None
 
 
 class PrintPdfRequest(BaseModel):
@@ -173,12 +174,12 @@ class GoogleAuthResponse(BaseModel):
 class GoogleItem(BaseModel):
     id: str
     name: str
-    mime_type: Optional[str] = None
-    modified_time: Optional[str] = None
+    mime_type: str | None = None
+    modified_time: str | None = None
     size: int = 0
-    kind: Optional[str] = None
-    supported: Optional[bool] = None
-    source: Optional[str] = None
+    kind: str | None = None
+    supported: bool | None = None
+    source: str | None = None
 
 
 def _google_oauth() -> GoogleOAuthStore:
@@ -196,7 +197,7 @@ def _google_creds(session_id: str):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
 
 
-def _json_id_list(value: Optional[str], field_name: str) -> list[str]:
+def _json_id_list(value: str | None, field_name: str) -> list[str]:
     if not value:
         return []
     import json
@@ -235,7 +236,7 @@ async def google_oauth_start() -> GoogleAuthResponse:
 
 
 @app.get("/google/oauth/callback", tags=["Google"])
-async def google_oauth_callback(state: str, code: Optional[str] = None, error: Optional[str] = None):
+async def google_oauth_callback(state: str, code: str | None = None, error: str | None = None):
     if error:
         return RedirectResponse(f"{settings.google.FRONTEND_REDIRECT_URI}?google_error={error}")
     if not code:
@@ -347,13 +348,45 @@ class KnowledgeUploadResponse(BaseModel):
 async def knowledge_upload(
     subject: Annotated[str, Form(description="Subject name (e.g. Physics)")],
     chapter: Annotated[str, Form(description="Chapter or Unit name (e.g. Electromagnetism)")],
-    files: Annotated[list[UploadFile], File(description="Syllabus/course documents to upload")],
+    files: Annotated[list[UploadFile] | None, File(description="Syllabus/course documents to upload")] = None,
+    google_session_id: Annotated[str | None, Form()] = None,
+    google_file_ids: Annotated[str | None, Form(description="JSON array of selected Drive/Classroom file IDs")] = None,
+    google_folder_ids: Annotated[str | None, Form(description="JSON array of selected Drive folder IDs")] = None,
 ) -> KnowledgeUploadResponse:
     """Extracts, chunks, embeds, and permanently saves documents to the Cloud Vector DB."""
-    try:
-        file_names, upload_paths, total_size_mb, _paths = await _save_and_validate_uploads(files)
-    except HTTPException:
-        raise
+    file_names: list[str] = []
+    upload_paths: list[str] = []
+    total_size_mb = 0.0
+
+    if files:
+        saved_names, saved_paths, size_mb, _paths = await _save_and_validate_uploads(files)
+        file_names.extend(saved_names)
+        upload_paths.extend(saved_paths)
+        total_size_mb += size_mb
+
+    selected_file_ids = _json_id_list(google_file_ids, "google_file_ids")
+    selected_folder_ids = _json_id_list(google_folder_ids, "google_folder_ids")
+    
+    if selected_file_ids or selected_folder_ids:
+        if not google_session_id:
+            raise HTTPException(status_code=400, detail="Connect Google before selecting Drive or Classroom documents.")
+        try:
+            imported = download_selection(
+                _google_creds(google_session_id), selected_file_ids, selected_folder_ids,
+                settings.paths.GOOGLE_IMPORTED_DOCUMENTS_DIR / uuid4().hex,
+                settings.api.MAX_UPLOAD_SIZE_MB * 1024 * 1024,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Could not import selected Google documents: {exc}") from exc
+        upload_paths.extend(str(path) for path in imported)
+        file_names.extend(path.name for path in imported)
+        total_size_mb += sum(path.stat().st_size for path in imported) / (1024 * 1024)
+
+    if not upload_paths:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No files provided. Please upload local files or select from Google Workspace.",
+        )
 
     logger.info(f"Uploading {len(file_names)} file(s) for {subject} - {chapter}")
 
@@ -404,10 +437,7 @@ async def rag_preview(
     Run RAG ingestion only and return chunk/debug information.
     Useful for validating uploads before running the full agent pipeline.
     """
-    try:
-        file_names, upload_paths, total_size_mb, _paths = await _save_and_validate_uploads(files)
-    except HTTPException:
-        raise
+    file_names, upload_paths, total_size_mb, _paths = await _save_and_validate_uploads(files)
 
     logger.info(f"RAG preview for {len(file_names)} file(s) ({total_size_mb:.2f} MB total)")
 
@@ -447,12 +477,12 @@ async def rag_preview(
 )
 async def generate_question_paper(
     # --- File upload (one or more documents) ---
-    files: Annotated[Optional[list[UploadFile]], File(description="Syllabus/course PDF, TXT, DOCX, or XLSX files")] = None,
-    google_session_id: Annotated[Optional[str], Form()] = None,
-    google_file_ids: Annotated[Optional[str], Form(description="JSON array of selected Drive/Classroom file IDs")] = None,
-    google_folder_ids: Annotated[Optional[str], Form(description="JSON array of selected Drive folder IDs")] = None,
-    subject: Annotated[Optional[str], Form(description="Filter by subject in Knowledge Base")] = None,
-    chapter: Annotated[Optional[str], Form(description="Filter by chapter in Knowledge Base")] = None,
+    files: Annotated[list[UploadFile] | None, File(description="Syllabus/course PDF, TXT, DOCX, or XLSX files")] = None,
+    google_session_id: Annotated[str | None, Form()] = None,
+    google_file_ids: Annotated[str | None, Form(description="JSON array of selected Drive/Classroom file IDs")] = None,
+    google_folder_ids: Annotated[str | None, Form(description="JSON array of selected Drive folder IDs")] = None,
+    subject: Annotated[str | None, Form(description="Filter by subject in Knowledge Base")] = None,
+    chapter: Annotated[str | None, Form(description="Filter by chapter in Knowledge Base")] = None,
 
     # --- Question distribution (Form fields) ---
     total_marks: Annotated[int, Form(description="Total marks for the paper")] = 100,
@@ -472,7 +502,7 @@ async def generate_question_paper(
     semester: Annotated[str, Form()] = "I",
     exam_type: Annotated[str, Form()] = "End Semester Examination",
     duration: Annotated[str, Form()] = "3 Hours",
-    exam_date: Annotated[Optional[str], Form(description="Optional exam date")] = None,
+    exam_date: Annotated[str | None, Form(description="Optional exam date")] = None,
 ) -> GenerateResponse:
     """
     Full pipeline endpoint:
@@ -544,7 +574,7 @@ async def generate_question_paper(
     # ------------------------------------------------------------------
     # Run Orchestrator (RAG ingest → agents → PDFs)
     # ------------------------------------------------------------------
-    if _orchestrator is None:
+    if AppState.orchestrator is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Orchestrator is not initialised. Service is starting up.",
@@ -559,7 +589,7 @@ async def generate_question_paper(
     if not filters:
         filters = None
 
-    result: OrchestratorResult = _orchestrator.run(
+    result: OrchestratorResult = AppState.orchestrator.run(
         uploaded_file_paths=upload_paths,
         distribution=distribution,
         paper_metadata=paper_metadata,

@@ -245,11 +245,27 @@ export async function uploadKnowledge(
   subject: string,
   chapter: string,
   files: File[],
+  googleSessionId?: string | null,
+  googleFileIds?: string[],
+  googleFolderIds?: string[],
 ): Promise<KnowledgeUploadResponse> {
   const body = new FormData();
   body.append("subject", subject);
   body.append("chapter", chapter);
-  files.forEach((f) => body.append("files", f));
+  
+  if (files && files.length > 0) {
+    files.forEach((f) => body.append("files", f));
+  }
+  
+  if (googleSessionId) {
+    body.append("google_session_id", googleSessionId);
+  }
+  if (googleFileIds && googleFileIds.length > 0) {
+    body.append("google_file_ids", JSON.stringify(googleFileIds));
+  }
+  if (googleFolderIds && googleFolderIds.length > 0) {
+    body.append("google_folder_ids", JSON.stringify(googleFolderIds));
+  }
 
   const res = await apiFetch("/knowledge/upload", { method: "POST", body });
   const data = await res.json().catch(() => ({}));

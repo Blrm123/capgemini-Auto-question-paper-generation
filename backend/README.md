@@ -276,7 +276,7 @@ curl -O http://localhost:8000/download/question_paper_20240611_143022.pdf
 ### `GET /health` — Health Check
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:3000/health
 ```
 
 **Response:**

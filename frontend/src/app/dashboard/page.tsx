@@ -733,9 +733,9 @@ function UploadCard({
         </button>
         <button
           type="button"
-          onClick={() => setTab("local")}
+          onClick={() => setTab("drive")}
           className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
-            tab === "local"
+            tab === "drive"
               ? "border-primary text-primary"
               : "border-transparent text-muted-foreground hover:text-foreground"
           }`}
@@ -747,15 +747,53 @@ function UploadCard({
             stroke="currentColor"
             strokeWidth="2.2"
           >
-            <rect width="20" height="14" x="2" y="3" rx="2" />
-            <line x1="8" x2="16" y1="21" y2="21" />
-            <line x1="12" x2="12" y1="17" y2="21" />
+            <path d="M21.5 17.5h-15l-3-6 10.5-10.5 4.5 9z" />
+            <path d="M12 7l-4.5 9h15" />
           </svg>
-          Local Files
+          Google Drive
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("classroom")}
+          className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+            tab === "classroom"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <line x1="3" x2="21" y1="9" y2="9" />
+          </svg>
+          Google Classroom
         </button>
       </div>
 
       {/* Google Session Connection Status bar */}
+      {(tab === "drive" || tab === "classroom") && !googleSessionId && (
+        <div className="mb-6 flex flex-col items-center justify-center rounded-xl border border-primary/20 bg-primary/5 p-8 text-center shadow-sm">
+          <svg viewBox="0 0 24 24" className="mb-4 h-10 w-10 text-primary" fill="currentColor">
+            <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.761H12.545z" />
+          </svg>
+          <h4 className="mb-2 text-base font-bold text-foreground">Connect to Google Workspace</h4>
+          <p className="mb-5 max-w-sm text-sm text-muted-foreground">
+            Sign in with Google to browse and select files directly from your Drive or Classroom.
+          </p>
+          <button
+            type="button"
+            onClick={onConnectGoogle}
+            className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 cursor-pointer"
+          >
+            Connect Google Account
+          </button>
+        </div>
+      )}
 
       {/* Browser sections content */}
       <div className="relative">
@@ -850,6 +888,24 @@ function UploadCard({
               />
             </div>
           </div>
+        )}
+
+        {tab === "drive" && googleSessionId && (
+          <GoogleDriveBrowser
+            sessionId={googleSessionId}
+            selections={googleSelections}
+            setSelections={setGoogleSelections}
+            setError={setGoogleError}
+          />
+        )}
+
+        {tab === "classroom" && googleSessionId && (
+          <GoogleClassroomBrowser
+            sessionId={googleSessionId}
+            selections={googleSelections}
+            setSelections={setGoogleSelections}
+            setError={setGoogleError}
+          />
         )}
       </div>
 

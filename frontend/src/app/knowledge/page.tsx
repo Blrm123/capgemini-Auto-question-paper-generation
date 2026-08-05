@@ -1,12 +1,455 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { motion, Variants } from "framer-motion";
-import { getKnowledgeList, uploadKnowledge, startGoogleOauth, type CatalogNode } from "@/lib/api";
+import { 
+  getKnowledgeList, 
+  uploadKnowledge, 
+  startGoogleOauth, 
+  getGoogleDriveItems,
+  getGoogleClassroomCourses,
+  getGoogleClassroomCourseMaterials,
+  type CatalogNode,
+  type GoogleItem
+} from "@/lib/api";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
-export default function KnowledgeBaseManager() {
+export interface SelectedGoogleItem {
+  id: string;
+  name: string;
+  type: string;
+  source: "drive" | "classroom";
+  mime_type?: string;
+  supported?: boolean;
+}
+
+function fileExt(name: string): string {
+  return (name.split(".").pop() || "").toLowerCase();
+}
+
+function FileTypeIcon({ ext }: { ext: string }) {
+  const colors: Record<string, string> = {
+    pdf: "bg-destructive/10 text-destructive border-destructive/20",
+    docx: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+    txt: "bg-muted text-muted-foreground border-border",
+  };
+  const cls = colors[ext] ?? "bg-muted text-muted-foreground border-border";
+  return (
+    <span
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-[10px] font-bold uppercase ${cls}`}
+    >
+      {ext.slice(0, 4) || "file"}
+    </span>
+  );
+}
+
+function GoogleDriveBrowser({
+  sessionId,
+  selections,
+  setSelections,
+  setError,
+}: {
+  sessionId: string;
+  selections: SelectedGoogleItem[];
+  setSelections: React.Dispatch<React.SetStateAction<SelectedGoogleItem[]>>;
+  setError: (err: string | null) => void;
+}) {
+  const [breadcrumbs, setBreadcrumbs] = useState<{ id: string; name: string }[]>([
+    { id: "root", name: "Google Drive" },
+  ]);
+  const [items, setItems] = useState<GoogleItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id;
+
+  const loadFolder = useCallback(
+    async (folderId: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getGoogleDriveItems(folderId, sessionId);
+        setItems(data);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [sessionId, setError],
+  );
+
+  useEffect(() => {
+    loadFolder(currentFolderId);
+  }, [currentFolderId, loadFolder]);
+
+  const onNavigate = (id: string, name: string) => {
+    setBreadcrumbs((prev) => [...prev, { id, name }]);
+  };
+
+  const onBreadcrumbClick = (idx: number) => {
+    setBreadcrumbs((prev) => prev.slice(0, idx + 1));
+  };
+
+  const toggleSelect = (item: GoogleItem) => {
+    const isSel = selections.some((x) => x.id === item.id);
+    if (isSel) {
+      setSelections((prev) => prev.filter((x) => x.id !== item.id));
+    } else {
+      setSelections((prev) => [
+        ...prev,
+        {
+          id: item.id,
+          name: item.name,
+          type: item.kind === "folder" ? "folder" : "file",
+          source: "drive",
+          mime_type: item.mime_type || undefined,
+          supported: item.supported || undefined,
+        },
+      ]);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Breadcrumbs */}
+      <nav className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground font-semibold bg-background/50 px-3 py-2 rounded-lg border border-border/40">
+        {breadcrumbs.map((crumb, idx) => {
+          const isLast = idx === breadcrumbs.length - 1;
+          return (
+            <div key={crumb.id} className="flex items-center gap-1">
+              {idx > 0 && <span className="text-[10px] opacity-40">/</span>}
+              <button
+                type="button"
+                onClick={() => onBreadcrumbClick(idx)}
+                disabled={isLast}
+                className={`transition-colors hover:text-foreground cursor-pointer ${
+                  isLast ? "text-primary font-bold" : ""
+                }`}
+              >
+                {crumb.name}
+              </button>
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* Items list */}
+      <div className="min-h-[220px] rounded-lg border border-border/60 bg-background/70 max-h-[300px] overflow-y-auto shadow-inner">
+        {loading ? (
+          <div className="flex h-[200px] flex-col items-center justify-center text-muted-foreground">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+            <p className="mt-2 text-xs">Loading items…</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="flex h-[200px] flex-col items-center justify-center text-xs text-muted-foreground">
+            No files or folders found here.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border/40">
+            {items.map((item) => {
+              const isFolder = item.kind === "folder";
+              const isSelected = selections.some((x) => x.id === item.id);
+              const isDisabled = !isFolder && !item.supported;
+
+              return (
+                <li
+                  key={item.id}
+                  className={`flex items-center justify-between gap-4 px-4 py-2 hover:bg-muted transition-colors ${
+                    isDisabled ? "opacity-40" : ""
+                  }`}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    {/* Icon */}
+                    {isFolder ? (
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5 shrink-0 text-amber-500"
+                        fill="currentColor"
+                      >
+                        <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        viewBox="0 0 24 24"
+                        className="h-5 w-5 shrink-0 text-sky-500"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                    )}
+
+                    {/* Name */}
+                    {isFolder ? (
+                      <button
+                        type="button"
+                        onClick={() => onNavigate(item.id, item.name)}
+                        className="truncate text-left text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-pointer"
+                      >
+                        {item.name}
+                      </button>
+                    ) : (
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {item.name}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex shrink-0 items-center gap-2.5">
+                    {isFolder ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(item)}
+                        className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                          isSelected
+                            ? "bg-amber-500/20 text-amber-500 border-amber-500/30"
+                            : "bg-background text-muted-foreground border-border hover:bg-amber-500/10 hover:text-amber-500 hover:border-amber-500/30"
+                        }`}
+                      >
+                        {isSelected ? "Folder Selected" : "Select Folder"}
+                      </button>
+                    ) : isDisabled ? (
+                      <span className="rounded bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground border border-border">
+                        Unsupported
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(item)}
+                        className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                          isSelected
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-foreground border-border hover:bg-primary/[0.04] hover:border-primary/20"
+                        }`}
+                      >
+                        {isSelected ? "Selected" : "Select"}
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function GoogleClassroomBrowser({
+  sessionId,
+  selections,
+  setSelections,
+  setError,
+}: {
+  sessionId: string;
+  selections: SelectedGoogleItem[];
+  setSelections: React.Dispatch<React.SetStateAction<SelectedGoogleItem[]>>;
+  setError: (err: string | null) => void;
+}) {
+  const [courses, setCourses] = useState<GoogleItem[]>([]);
+  const [materials, setMaterials] = useState<GoogleItem[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<GoogleItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [view, setView] = useState<"courses" | "materials">("courses");
+
+  const loadCourses = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await getGoogleClassroomCourses(sessionId);
+      setCourses(data);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, setError]);
+
+  const loadMaterials = useCallback(
+    async (courseId: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getGoogleClassroomCourseMaterials(courseId, sessionId);
+        setMaterials(data);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [sessionId, setError],
+  );
+
+  useEffect(() => {
+    if (view === "courses") {
+      loadCourses();
+    }
+  }, [view, loadCourses]);
+
+  const onCourseClick = (course: GoogleItem) => {
+    setSelectedCourse(course);
+    setView("materials");
+    loadMaterials(course.id);
+  };
+
+  const onBack = () => {
+    setView("courses");
+    setSelectedCourse(null);
+    setMaterials([]);
+  };
+
+  const toggleSelect = (item: GoogleItem) => {
+    const isSel = selections.some((x) => x.id === item.id);
+    if (isSel) {
+      setSelections((prev) => prev.filter((x) => x.id !== item.id));
+    } else {
+      setSelections((prev) => [
+        ...prev,
+        {
+          id: item.id,
+          name: item.name,
+          type: "file",
+          source: "classroom",
+          supported: true,
+        },
+      ]);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* View Header */}
+      {view === "materials" && selectedCourse && (
+        <div className="flex items-center gap-2 bg-background/50 px-3 py-2 rounded-lg border border-border/40">
+          <button
+            type="button"
+            onClick={onBack}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground font-semibold cursor-pointer"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="m15 18-6-6 6-6" />
+            </svg>
+            Back to Classes
+          </button>
+          <span className="text-xs text-muted-foreground opacity-40">/</span>
+          <span className="text-xs font-bold text-primary truncate">{selectedCourse.name}</span>
+        </div>
+      )}
+
+      {/* Classroom Container */}
+      <div className="min-h-[220px] rounded-lg border border-border/60 bg-background/70 max-h-[300px] overflow-y-auto shadow-inner">
+        {loading ? (
+          <div className="flex h-[200px] flex-col items-center justify-center text-muted-foreground">
+            <span className="h-6 w-6 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+            <p className="mt-2 text-xs">Loading classroom data…</p>
+          </div>
+        ) : view === "courses" ? (
+          courses.length === 0 ? (
+            <div className="flex h-[200px] flex-col items-center justify-center text-xs text-muted-foreground">
+              No active Classroom classes found.
+            </div>
+          ) : (
+            <ul className="divide-y divide-border/40">
+              {courses.map((course) => (
+                <li
+                  key={course.id}
+                  className="flex items-center justify-between gap-4 px-4 py-2.5 hover:bg-muted transition-colors"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5 shrink-0 text-emerald-600"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                      <path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5" />
+                    </svg>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {course.name}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onCourseClick(course)}
+                    className="shrink-0 rounded bg-background border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted cursor-pointer transition-colors shadow-sm"
+                  >
+                    View Materials
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : materials.length === 0 ? (
+          <div className="flex h-[200px] flex-col items-center justify-center text-xs text-muted-foreground">
+            No materials with attached Drive files found.
+          </div>
+        ) : (
+          <ul className="divide-y divide-border/40">
+            {materials.map((material) => {
+              const isSelected = selections.some((x) => x.id === material.id);
+              return (
+                <li
+                  key={material.id}
+                  className="flex items-center justify-between gap-4 px-4 py-2 hover:bg-muted transition-colors"
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5 shrink-0 text-sky-500"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
+                      <polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {material.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggleSelect(material)}
+                    className={`rounded px-2.5 py-1 text-xs font-semibold transition border cursor-pointer ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-background text-foreground border-border hover:bg-primary/[0.04] hover:border-primary/20"
+                    }`}
+                  >
+                    {isSelected ? "Selected" : "Select"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+function KnowledgeBaseManagerInner() {
+  const searchParams = useSearchParams();
   const [catalog, setCatalog] = useState<Record<string, CatalogNode>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,9 +457,24 @@ export default function KnowledgeBaseManager() {
   const [newSubject, setNewSubject] = useState("");
   const [newChapter, setNewChapter] = useState("");
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  
+  // Google state
+  const [googleSessionId, setGoogleSessionId] = useState<string | null>(null);
+  const [googleSelections, setGoogleSelections] = useState<SelectedGoogleItem[]>([]);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"local" | "drive" | "classroom">("local");
+
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const gc = searchParams.get("google_connected");
+    if (gc) {
+      setGoogleSessionId(gc);
+      setTab("drive");
+    }
+  }, [searchParams]);
 
   const loadCatalog = async () => {
     setLoading(true);
@@ -62,17 +520,41 @@ export default function KnowledgeBaseManager() {
     }
   };
 
+  const onConnectGoogle = async () => {
+    try {
+      const auth = await startGoogleOauth();
+      window.location.href = auth.authorization_url;
+    } catch (e) {
+      toast.error("Google connection error: " + (e as Error).message);
+    }
+  };
+
   const onUpload = async () => {
-    if (!newSubject.trim() || !newChapter.trim() || uploadFiles.length === 0) {
-      toast.error("Please enter a subject, chapter, and select files to upload.");
+    if (!newSubject.trim() || !newChapter.trim()) {
+      toast.error("Please enter a subject and chapter.");
+      return;
+    }
+    if (uploadFiles.length === 0 && googleSelections.length === 0) {
+      toast.error("Please select at least one file to upload (Local or Google).");
       return;
     }
     setUploading(true);
     try {
-      await uploadKnowledge(newSubject, newChapter, uploadFiles);
+      const googleFileIds = googleSelections.filter((s) => s.type === "file").map((s) => s.id);
+      const googleFolderIds = googleSelections.filter((s) => s.type === "folder").map((s) => s.id);
+      
+      await uploadKnowledge(
+        newSubject, 
+        newChapter, 
+        uploadFiles, 
+        googleSessionId, 
+        googleFileIds, 
+        googleFolderIds
+      );
       setNewSubject("");
       setNewChapter("");
       setUploadFiles([]);
+      setGoogleSelections([]);
       toast.success("Documents successfully added to the Knowledge Base!");
       await loadCatalog();
     } catch (e) {
@@ -82,13 +564,12 @@ export default function KnowledgeBaseManager() {
     }
   };
 
-  const onConnectGoogle = async () => {
-    try {
-      const auth = await startGoogleOauth();
-      window.location.href = auth.authorization_url;
-    } catch (e) {
-      toast.error("Google connection error: " + (e as Error).message);
-    }
+  const removeLocalFile = (index: number) => {
+    setUploadFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const removeGoogleFile = (id: string) => {
+    setGoogleSelections((prev) => prev.filter((x) => x.id !== id));
   };
 
   const containerVariants: Variants = {
@@ -148,7 +629,7 @@ export default function KnowledgeBaseManager() {
             initial={{ opacity: 0, y: 20 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.6 }}
-            className="space-y-6 lg:col-span-5"
+            className="space-y-6 lg:col-span-6"
           >
             <section className="relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur-md transition-all sm:p-8">
               <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/20 via-primary/60 to-primary/20" />
@@ -167,7 +648,7 @@ export default function KnowledgeBaseManager() {
                   />
                 </div>
                 
-                <div className="grid gap-1.5">
+                <div className="grid gap-1.5 mb-2">
                   <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Chapter / Unit</label>
                   <input
                     type="text"
@@ -178,45 +659,204 @@ export default function KnowledgeBaseManager() {
                   />
                 </div>
 
-                <div 
-                  className={`mt-2 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-all ${dragActive ? "border-primary bg-primary/5" : "border-border/60 hover:border-primary/40 hover:bg-muted/30"}`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                >
-                  <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                      <polyline points="17 8 12 3 7 8" />
-                      <line x1="12" x2="12" y1="3" y2="15" />
-                    </svg>
-                  </div>
-                  <p className="text-sm font-semibold text-foreground">
-                    {uploadFiles.length > 0 ? `${uploadFiles.length} file(s) selected` : "Drag and drop documents here"}
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground max-w-[200px]">
-                    {uploadFiles.length > 0 ? uploadFiles.map(f => f.name).join(", ") : "Supported: PDF, TXT, DOCX. Max 50MB."}
-                  </p>
-                  <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    className="mt-6 rounded bg-background border border-border px-4 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition"
+                {/* Source Tab Selector */}
+                <div className="mb-2 flex border-b border-border/40 pb-1.5 overflow-x-auto gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTab("local")}
+                    className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                      tab === "local"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    Browse Files
+                    Local Files
                   </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept=".pdf,.txt,.docx,.xlsx"
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setTab("drive")}
+                    className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                      tab === "drive"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Google Drive
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTab("classroom")}
+                    className={`flex items-center gap-2 border-b-2 pb-2 px-3 text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+                      tab === "classroom"
+                        ? "border-primary text-primary"
+                        : "border-transparent text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Google Classroom
+                  </button>
                 </div>
+
+                {/* Local Upload */}
+                {tab === "local" && (
+                  <div 
+                    className={`flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-all ${dragActive ? "border-primary bg-primary/5" : "border-border/60 hover:border-primary/40 hover:bg-muted/30"}`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" x2="12" y1="3" y2="15" />
+                      </svg>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">
+                      Drag and drop documents here
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground max-w-[200px]">
+                      Supported: PDF, TXT, DOCX. Max 50MB.
+                    </p>
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      className="mt-6 rounded bg-background border border-border px-4 py-2 text-xs font-semibold text-foreground shadow-sm hover:bg-muted transition"
+                    >
+                      Browse Files
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.txt,.docx,.xlsx"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+                )}
+
+                {/* Google Connection Wrapper */}
+                {(tab === "drive" || tab === "classroom") && !googleSessionId && (
+                  <div className="flex flex-col items-center justify-center rounded-xl border border-primary/20 bg-primary/5 p-8 text-center shadow-sm">
+                    <svg viewBox="0 0 24 24" className="mb-4 h-10 w-10 text-primary" fill="currentColor">
+                      <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.761H12.545z" />
+                    </svg>
+                    <h4 className="mb-2 text-base font-bold text-foreground">Connect to Google Workspace</h4>
+                    <p className="mb-5 max-w-sm text-sm text-muted-foreground">
+                      Sign in with Google to browse and select files directly from your Drive or Classroom.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={onConnectGoogle}
+                      className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 cursor-pointer"
+                    >
+                      Connect Google Account
+                    </button>
+                  </div>
+                )}
+
+                {/* Google Drive Tab */}
+                {tab === "drive" && googleSessionId && (
+                  <GoogleDriveBrowser
+                    sessionId={googleSessionId}
+                    selections={googleSelections}
+                    setSelections={setGoogleSelections}
+                    setError={setGoogleError}
+                  />
+                )}
+
+                {/* Google Classroom Tab */}
+                {tab === "classroom" && googleSessionId && (
+                  <GoogleClassroomBrowser
+                    sessionId={googleSessionId}
+                    selections={googleSelections}
+                    setSelections={setGoogleSelections}
+                    setError={setGoogleError}
+                  />
+                )}
+                
+                {googleError && (
+                  <p className="text-xs text-destructive bg-destructive/10 p-2 rounded">{googleError}</p>
+                )}
+
+                {/* Selected Queue */}
+                {(uploadFiles.length > 0 || googleSelections.length > 0) && (
+                  <div className="mt-4 border-t border-border/60 pt-4">
+                    <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Selected Documents ({uploadFiles.length + googleSelections.length} ready)
+                    </p>
+                    <ul className="grid gap-2">
+                      {uploadFiles.map((f, i) => {
+                        const ext = fileExt(f.name);
+                        return (
+                          <li
+                            key={`local-${f.name}-${i}`}
+                            className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/90 px-3 py-2.5 shadow-sm"
+                          >
+                            <FileTypeIcon ext={ext} />
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold text-foreground" title={f.name}>
+                                {f.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                <span className="rounded bg-muted px-1 py-0.2 text-[9px] font-semibold text-muted-foreground">
+                                  Local Upload
+                                </span>
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeLocalFile(i)}
+                              className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        );
+                      })}
+                      {googleSelections.map((item, idx) => {
+                        const ext = item.type === "folder" ? "folder" : fileExt(item.name);
+                        return (
+                          <li
+                            key={`google-${item.id}-${idx}`}
+                            className="flex items-center gap-3 rounded-lg border border-border/70 bg-background/90 px-3 py-2.5 shadow-sm"
+                          >
+                            {item.type === "folder" ? (
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-[10px] font-bold text-amber-500 uppercase">
+                                fldr
+                              </span>
+                            ) : (
+                              <FileTypeIcon ext={ext} />
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold text-foreground" title={item.name}>
+                                {item.name}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                                <span className="rounded bg-sky-500/20 px-1 py-0.2 text-[9px] font-semibold text-sky-400">
+                                  {item.source === "drive" ? "Google Drive" : "Classroom"}
+                                </span>
+                                <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                                <span className="capitalize text-[10px]">{item.type}</span>
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeGoogleFile(item.id)}
+                              className="rounded px-2 py-1 text-xs font-semibold text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                            >
+                              Remove
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                )}
 
                 <button
                   onClick={onUpload}
-                  disabled={uploading}
+                  disabled={uploading || (uploadFiles.length === 0 && googleSelections.length === 0)}
                   className="w-full mt-2 rounded-xl bg-primary px-4 py-3.5 text-sm font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {uploading ? (
@@ -229,38 +869,6 @@ export default function KnowledgeBaseManager() {
                   )}
                 </button>
               </div>
-            </section>
-            
-            {/* Google Workspace Block */}
-            <section className="flex flex-col items-center justify-center py-10 text-center rounded-2xl border border-dashed border-border/60 bg-card/40 backdrop-blur-md shadow-sm">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-sm">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3Z" />
-                </svg>
-              </div>
-              <h3 className="text-sm font-bold text-foreground">Import from Google Workspace</h3>
-              <p className="mt-1.5 max-w-sm px-4 text-xs text-muted-foreground leading-relaxed">
-                Connect your account to index syllabus documents, notes, and worksheets directly from
-                your Google Drive folders and Google Classroom classes.
-              </p>
-              <button
-                type="button"
-                onClick={onConnectGoogle}
-                className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#E05F36] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#E05F36]/90 cursor-pointer"
-              >
-                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.7 0 3.3.6 4.5 1.7l2.4-2.4C17.3 1.7 14.9 1 12.24 1 6.58 1 2 5.58 2 11.24s4.58 10.24 10.24 10.24c5.79 0 10.24-4.1 10.24-10.24 0-.6-.05-1.2-.15-1.75H12.24z" />
-                </svg>
-                Connect Google Account
-              </button>
             </section>
             
             {/* Stats Card */}
@@ -287,7 +895,7 @@ export default function KnowledgeBaseManager() {
             initial="hidden" 
             animate="show" 
             variants={containerVariants}
-            className="lg:col-span-7 space-y-6"
+            className="lg:col-span-6 space-y-6"
           >
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -378,5 +986,13 @@ export default function KnowledgeBaseManager() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function KnowledgeBaseManager() {
+  return (
+    <Suspense fallback={<div>Loading Knowledge Base...</div>}>
+      <KnowledgeBaseManagerInner />
+    </Suspense>
   );
 }
