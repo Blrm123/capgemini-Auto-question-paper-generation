@@ -1,25 +1,30 @@
 import type { Metadata } from "next";
 import { ClerkProvider } from '@clerk/nextjs'
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Fraunces, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { Header } from "@/components/Header";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-sans",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const fraunces = Fraunces({
   subsets: ["latin"],
+  variable: "--font-serif",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
   title: "QUBIT",
   description: "AI-assisted university examination paper creation.",
   icons: {
-    icon: "/logo.jpeg",
+    icon: "/logo.png",
   },
 };
 
@@ -29,11 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className={`${inter.variable} ${fraunces.variable} ${jetbrainsMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col font-serif bg-background text-foreground">
         <ClerkProvider>
           <Providers>
             <Header />

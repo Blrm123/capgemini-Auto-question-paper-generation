@@ -102,6 +102,7 @@ function Dashboard() {
   const [pdfResult, setPdfResult] = useState<GenerateResponse | null>(null);
   const [isPrinting, setIsPrinting] = useState(false);
   const [isUpdatingAnswerKey, setIsUpdatingAnswerKey] = useState(false);
+  const [paperId, setPaperId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -242,6 +243,7 @@ function Dashboard() {
       setAnswerKey(res.answer_key || []);
       setModifiedQuestionIds(new Set());
       setPdfResult(null);
+      if (res.paper_id) setPaperId(res.paper_id);
     } catch (e) {
       const err = e as Error & { errors?: string[] };
       setError({ message: err.message, errors: err.errors });
@@ -292,17 +294,17 @@ function Dashboard() {
   };
 
   return (
-    <div className="relative min-h-screen text-foreground pb-12">
+    <div className="relative min-h-screen text-foreground">
       <BackgroundFX />
       
-      <main className="relative mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8">
+      <main className="relative mx-auto w-full max-w-[1440px] px-4 pt-2 pb-8 sm:px-6 lg:px-8">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-medium text-primary/80">Examination Paper Studio</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-tight text-secondary sm:text-3xl">
+            <p className="mb-2 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-primary">Examination Paper Studio</p>
+            <h2 className="font-serif text-[clamp(28px,4vw,40px)] font-bold leading-tight m-0 text-secondary">
               Configure &amp; generate your paper
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-2.5 font-mono text-[13px] text-muted-foreground max-w-2xl">
               Upload course materials, set examination parameters, and generate a structured
               question paper with an answer key.
             </p>
@@ -439,6 +441,19 @@ function Dashboard() {
                       >
                         ← Modify Parameters &amp; Regenerate
                       </button>
+                      {paperId && (
+                        <Link
+                          href="/analytics"
+                          className="flex items-center justify-center gap-2 w-full rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-xs font-semibold text-primary hover:bg-primary/10 transition"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="18" y1="20" x2="18" y2="10" />
+                            <line x1="12" y1="20" x2="12" y2="4" />
+                            <line x1="6" y1="20" x2="6" y2="14" />
+                          </svg>
+                          View Paper Analytics
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -537,11 +552,6 @@ function Dashboard() {
           )}
         </div>
       </main>
-      <div className="border-t border-border bg-background py-6 mt-8">
-        <p className="text-center text-sm text-muted-foreground">
-          QUBIT &middot; For institutional use
-        </p>
-      </div>
     </div>
   );
 }
@@ -550,8 +560,12 @@ function Dashboard() {
 
 function BackgroundFX({ scrollY }: { scrollY?: number } = {}) {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-background">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-background to-background"></div>
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-background overflow-hidden">
+      {/* Background blobs to make the glassmorphism header pop */}
+      <div className="absolute -top-[150px] -right-[100px] w-[500px] h-[500px] rounded-full bg-primary/20 blur-[100px]" />
+      <div className="absolute top-[50px] -left-[150px] w-[450px] h-[450px] rounded-full bg-secondary/20 blur-[120px]" />
+      
+      <div className="absolute left-[20px] sm:left-[48px] top-0 bottom-0 w-[1.5px] bg-primary/35" />
     </div>
   );
 }
@@ -571,17 +585,16 @@ function Card({
 }) {
   return (
     <section
-      className={`scroll-reveal relative overflow-hidden rounded-xl border border-border bg-background/85 p-6 shadow-[0_1px_2px_oklch(0.32_0.07_257/0.04),0_8px_32px_-12px_oklch(0.32_0.07_257/0.1)] backdrop-blur-sm sm:p-7 transition-all duration-700 ease-out hover:-translate-y-1 hover:shadow-[0_4px_12px_oklch(0.32_0.07_257/0.05),0_16px_48px_-10px_oklch(0.32_0.07_257/0.15)] hover:border-primary/20 hover:bg-background/90 ${className}`}
+      className={`relative overflow-hidden rounded-[10px] border border-foreground/[0.08] bg-card p-6 shadow-sm transition-all duration-300 hover:border-primary/30 sm:p-7 ${className}`}
     >
-      <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary/20 via-primary/50 to-primary/20" />
       <header className="relative mb-5 flex items-start gap-3">
         {step != null && (
-          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-[11px] font-bold text-primary">
+          <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10 font-mono text-[11px] font-bold text-primary">
             {step}
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <h2 className="text-[15px] font-semibold text-foreground">{title}</h2>
+          <h2 className="text-[18px] font-serif font-bold text-foreground">{title}</h2>
           {description && (
             <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
           )}
@@ -604,7 +617,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block">
+    <label className="flex h-full flex-col justify-end">
       <span className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
         {required && <span className="ml-1 text-destructive">*</span>}
@@ -1486,7 +1499,7 @@ function KnowledgeBaseBrowser({
           <div className="max-h-[250px] overflow-y-auto space-y-4">
             {Object.entries(catalog).map(([subjKey, subjNode]) => (
               <div key={subjKey} className="space-y-2">
-                <div className="font-semibold text-sm text-sky-400 flex items-center gap-2">
+                <div className="font-bold text-base text-secondary flex items-center gap-2">
                   <svg
                     viewBox="0 0 24 24"
                     className="h-4 w-4"
@@ -1647,7 +1660,7 @@ function NumField({
     <Field label={label} required>
       <input
         type="number"
-        className={inputCls}
+        className={`${inputCls} font-mono font-semibold`}
         min={min}
         max={max}
         step={step}
@@ -1719,7 +1732,7 @@ function QuestionsCard({
       <div
         className={`mt-4 flex items-center justify-between rounded-md border px-4 py-2.5 text-sm ${
           ok
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+            ? "border-secondary/20 bg-secondary/10 text-secondary"
             : "border-amber-500/20 bg-amber-500/10 text-amber-500"
         }`}
       >
@@ -1784,7 +1797,7 @@ function DifficultyCard({
       <div
         className={`mt-4 flex items-center justify-between rounded-md border px-4 py-2.5 text-sm ${
           ok
-            ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
+            ? "border-secondary/20 bg-secondary/10 text-secondary"
             : "border-amber-500/20 bg-amber-500/10 text-amber-500"
         }`}
       >

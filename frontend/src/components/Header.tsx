@@ -3,58 +3,74 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { UserButton, useAuth } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
 
 export function Header() {
   const pathname = usePathname();
-  const isHome = pathname === "/";
   const { isSignedIn, isLoaded } = useAuth();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   return (
     <header 
-      className={`fixed top-0 inset-x-0 z-50 w-full transition-all duration-300 py-4 ${
-        isHome 
-          ? "bg-black/20 backdrop-blur-[20px] border-b border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]" 
-          : "bg-background/60 backdrop-blur-xl border-b border-border/40 shadow-sm"
+      className={`fixed z-50 w-full transition-all duration-500 ease-out ${
+        scrolled ? "top-2 left-0 right-0 px-4" : "top-4 left-0 right-0 px-4 sm:px-6 lg:px-8"
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 h-12">
-        <Link href="/" className="flex items-center gap-2">
-          <img src="/logo.jpeg" alt="Logo" className="h-8 w-auto rounded-sm object-contain" />
-          <span className="text-lg font-bold tracking-wide text-foreground drop-shadow-sm">
+      <div 
+        className={`relative mx-auto flex items-center justify-between rounded-2xl glass-panel transition-all duration-500 ease-out ${
+          scrolled ? "h-12 max-w-4xl px-5" : "h-14 max-w-7xl px-6 gap-4"
+        }`}
+      >
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <img 
+            src="/logo.png" 
+            alt="Logo" 
+            className={`w-auto rounded-sm object-contain transition-all duration-500 ${scrolled ? "h-6" : "h-8"}`} 
+          />
+          <span 
+            className={`font-serif font-bold tracking-wide text-foreground transition-all duration-500 ${scrolled ? "text-lg hidden sm:block" : "text-xl"}`}
+          >
             QUBIT
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className={`hidden md:flex items-center transition-all duration-500 ${scrolled ? "gap-5 text-[13px]" : "gap-8"}`}>
           {isSignedIn && (
             <>
               <Link 
                 href="/" 
-                className={`text-sm font-medium transition ${pathname === "/" ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
+                className={`font-serif font-bold transition ${pathname === "/" ? "text-primary" : "text-foreground/70 hover:text-primary"} ${scrolled ? "text-sm" : "text-[15px]"}`}
               >
                 Home
               </Link>
               <Link 
                 href="/dashboard" 
-                className={`text-sm font-medium transition ${pathname === "/dashboard" ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
+                className={`font-serif font-bold transition ${pathname === "/dashboard" ? "text-primary" : "text-foreground/70 hover:text-primary"} ${scrolled ? "text-sm" : "text-[15px]"}`}
               >
                 Dashboard
               </Link>
               <Link 
                 href="/history" 
-                className={`text-sm font-medium transition ${pathname === "/history" ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
+                className={`font-serif font-bold transition ${pathname === "/history" ? "text-primary" : "text-foreground/70 hover:text-primary"} ${scrolled ? "text-sm" : "text-[15px]"}`}
               >
                 History
               </Link>
               <Link 
                 href="/analytics" 
-                className={`text-sm font-medium transition ${pathname === "/analytics" ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
+                className={`font-serif font-bold transition ${pathname === "/analytics" ? "text-primary" : "text-foreground/70 hover:text-primary"} ${scrolled ? "text-sm" : "text-[15px]"}`}
               >
                 Analytics
               </Link>
               <Link 
                 href="/knowledge" 
-                className={`text-sm font-medium transition ${pathname === "/knowledge" ? "text-primary" : "text-foreground/70 hover:text-primary"}`}
+                className={`font-serif font-bold transition ${pathname === "/knowledge" ? "text-primary" : "text-foreground/70 hover:text-primary"} ${scrolled ? "text-sm" : "text-[15px]"}`}
               >
                 Knowledge Base
               </Link>
@@ -66,11 +82,7 @@ export function Header() {
           {isLoaded && !isSignedIn && (
             <Link
               href="/sign-in"
-              className={`text-sm font-medium px-4 py-2 rounded-lg transition ${
-                isHome 
-                  ? "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg" 
-                  : "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-sm"
-              }`}
+              className="font-serif text-[14px] font-bold px-4 py-2 rounded-lg transition bg-primary text-primary-foreground hover:opacity-90 shadow-sm"
             >
               Login
             </Link>

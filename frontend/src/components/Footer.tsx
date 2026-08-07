@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
           <div className="md:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2 mb-4">
-              <img src="/logo.jpeg" alt="Logo" className="h-8 w-auto rounded-sm object-contain" />
+              <img src="/logo.png" alt="Logo" className="h-8 w-auto rounded-sm object-contain" />
               <span className="text-xl font-bold tracking-wide text-secondary-foreground">
                 QUBIT
               </span>

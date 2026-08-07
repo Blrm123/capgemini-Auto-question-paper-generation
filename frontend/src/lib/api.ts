@@ -72,6 +72,7 @@ export interface GenerateResponse {
   errors: string[];
   questions?: ValidatedQuestion[];
   answer_key?: AnswerKeyItem[];
+  paper_id?: string;
 }
 
 export interface PapersResponse {
@@ -86,6 +87,21 @@ export interface AnalyticsResponse {
   bloom_distribution: Record<string, number>;
   difficulty_distribution: Record<string, number>;
   recent_activity: { date: string; papers: number }[];
+}
+
+export interface PaperAnalyticsResponse {
+  paper_id: string;
+  generated_at: string;
+  course_name: string;
+  exam_type: string;
+  elapsed_seconds: number;
+  total_questions: number;
+  total_marks: number;
+  bloom_distribution: Record<string, number>;
+  difficulty_distribution: Record<string, number>;
+  marks_distribution: Record<string, number>;
+  unit_coverage: { unit: string; count: number }[];
+  bloom_by_difficulty: Record<string, Record<string, number>>;
 }
 
 function parseApiError(data: unknown, status: number): { message: string; errors?: string[] } {
@@ -138,6 +154,18 @@ export async function getHealth(): Promise<HealthResponse> {
 export async function getAnalytics(): Promise<AnalyticsResponse> {
   const res = await apiFetch("/analytics");
   if (!res.ok) throw new Error("Failed to fetch analytics");
+  return res.json();
+}
+
+export async function getLatestPaperAnalytics(): Promise<PaperAnalyticsResponse> {
+  const res = await apiFetch("/analytics/paper/latest");
+  if (!res.ok) throw new Error("No papers generated yet");
+  return res.json();
+}
+
+export async function getPaperAnalytics(paperId: string): Promise<PaperAnalyticsResponse> {
+  const res = await apiFetch(`/analytics/paper/${encodeURIComponent(paperId)}`);
+  if (!res.ok) throw new Error(`Paper analytics not found for ${paperId}`);
   return res.json();
 }
 

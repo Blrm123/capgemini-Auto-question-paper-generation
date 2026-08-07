@@ -593,12 +593,12 @@ function KnowledgeBaseManagerInner() {
   }, 0);
 
   return (
-    <div className="relative min-h-screen text-foreground pb-20">
+    <div className="relative min-h-screen text-foreground">
       <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 bg-background">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-background to-background"></div>
       </div>
 
-      <main className="relative mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 lg:px-8">
+      <main className="relative mx-auto w-full max-w-[1440px] px-4 pt-2 pb-8 sm:px-6 lg:px-8">
         <div className="mb-10 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
             <p className="text-sm font-medium text-primary/80 tracking-wide uppercase">RAG Engine</p>
@@ -875,7 +875,7 @@ function KnowledgeBaseManagerInner() {
             <section className="relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 shadow-sm backdrop-blur-md transition-all">
               <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Vector Database Stats</h3>
               <div className="flex items-center gap-4">
-                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                 <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-secondary/10 text-secondary border border-secondary/20">
                    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                      <ellipse cx="12" cy="5" rx="9" ry="3" />
                      <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
@@ -972,7 +972,7 @@ function KnowledgeBaseManagerInner() {
                             </svg>
                             <span className="text-sm font-medium text-foreground">{chapNode.name}</span>
                           </div>
-                          <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-emerald-500 border border-emerald-500/20">
+                          <span className="rounded-full bg-secondary/10 px-2.5 py-0.5 text-[10px] font-semibold tracking-wide text-secondary border border-secondary/20">
                             {chapNode.chunk_count} Chunks
                           </span>
                         </div>

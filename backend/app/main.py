@@ -104,6 +104,7 @@ class GenerateResponse(BaseModel):
     debug: dict = Field(default_factory=dict)
     questions: list[dict] | None = None
     answer_key: list[dict] | None = None
+    paper_id: str | None = None
 
 
 class PaperMetadataModel(BaseModel):
@@ -156,6 +157,22 @@ class AnalyticsResponse(BaseModel):
     bloom_distribution: dict
     difficulty_distribution: dict
     recent_activity: list[dict]
+
+
+class PaperAnalyticsResponse(BaseModel):
+    """Response body for per-paper analytics endpoints."""
+    paper_id: str
+    generated_at: str
+    course_name: str
+    exam_type: str
+    elapsed_seconds: float
+    total_questions: int
+    total_marks: int
+    bloom_distribution: dict
+    difficulty_distribution: dict
+    marks_distribution: dict
+    unit_coverage: list[dict]
+    bloom_by_difficulty: dict
 
 
 class HealthResponse(BaseModel):
@@ -599,15 +616,17 @@ async def generate_question_paper(
     # ------------------------------------------------------------------
     # Build response
     # ------------------------------------------------------------------
+    paper_id: str | None = None
     if result.success:
         message = (
             f"Question paper and answer key generated successfully "
             f"from {result.rag_chunk_count} RAG chunk(s) in {result.elapsed_seconds:.1f}s."
         )
         if result.final_state and "validated_questions" in result.final_state:
-            AnalyticsService.record_generation(
+            paper_id = AnalyticsService.record_generation(
                 validated_questions=result.final_state["validated_questions"],
                 elapsed_seconds=result.elapsed_seconds,
+                paper_metadata=paper_metadata,
             )
     else:
         message = (
@@ -641,6 +660,7 @@ async def generate_question_paper(
         debug=result.debug_info,
         questions=result.final_state.get("validated_questions") if result.final_state else None,
         answer_key=result.final_state.get("answer_key") if result.final_state else None,
+        paper_id=paper_id,
     )
 
 
@@ -873,6 +893,40 @@ async def get_analytics() -> AnalyticsResponse:
         difficulty_distribution=metrics["difficulty_distribution"],
         recent_activity=metrics["recent_activity"],
     )
+
+
+@app.get(
+    "/analytics/paper/latest",
+    response_model=PaperAnalyticsResponse,
+    tags=["Analytics"],
+    summary="Get analytics for the most recently generated paper",
+)
+async def get_latest_paper_analytics() -> PaperAnalyticsResponse:
+    """Returns per-paper analytics for the last generated paper."""
+    record = AnalyticsService.get_latest_paper_analytics()
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No papers have been generated yet.",
+        )
+    return PaperAnalyticsResponse(**record)
+
+
+@app.get(
+    "/analytics/paper/{paper_id}",
+    response_model=PaperAnalyticsResponse,
+    tags=["Analytics"],
+    summary="Get analytics for a specific generated paper",
+)
+async def get_paper_analytics(paper_id: str) -> PaperAnalyticsResponse:
+    """Returns per-paper analytics for a specific paper by its ID."""
+    record = AnalyticsService.get_paper_analytics(paper_id)
+    if not record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Paper '{paper_id}' not found.",
+        )
+    return PaperAnalyticsResponse(**record)
 
 # ---------------------------------------------------------------------------
 # Entry point
